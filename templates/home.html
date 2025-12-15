@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Главная - Paddle Booking{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h1>Бронирование паддл кортов</h1>
+        <p>Забронируйте корт для игры в паддл теннис в удобное для вас время</p>
+        <a href="{% url 'booking' %}" class="cta-button">Забронировать сейчас</a>
+    </div>
+</div>
+
+<div class="features">
+    <div class="feature-card">
+        <i class="fas fa-calendar-check"></i>
+        <h3>Легкое бронирование</h3>
+        <p>Выбирайте удобное время онлайн</p>
+    </div>
+    <div class="feature-card">
+        <i class="fas fa-trophy"></i>
+        <h3>Турниры</h3>
+        <p>Участвуйте в регулярных соревнованиях</p>
+    </div>
+    <div class="feature-card">
+        <i class="fas fa-users"></i>
+        <h3>Сообщество</h3>
+        <p>Присоединяйтесь к нашему клубу</p>
+    </div>
+</div>
+
+<div class="info-section">
+    <h2>Как это работает?</h2>
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Выберите корт</h3>
+            <p>Выберите подходящий корт из доступных</p>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Выберите время</h3>
+            <p>Забронируйте удобное для вас время</p>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Оплатите онлайн</h3>
+            <p>Безопасная онлайн оплата</p>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <h3>Играйте!</h3>
+            <p>Приходите и наслаждайтесь игрой</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-brand">
+            <i class="fas fa-table-tennis-paddle-ball"></i>
+            <span>Paddle Booking</span>
+        </div>
+
+        <div class="nav-menu">
+            <a href="{% url 'home' %}" class="nav-item {% if request.path == '/' %}active{% endif %}">Главная</a>
+            <a href="{% url 'news' %}" class="nav-item {% if request.path == '/news/' %}active{% endif %}">Новости</a>
+            <a href="{% url 'booking' %}" class="nav-item {% if request.path == '/booking/' %}active{% endif %}">Бронирование</a>
+            <a href="{% url 'tournaments' %}" class="nav-item {% if request.path == '/tournaments/' %}active{% endif %}">Турниры</a>
+        </div>
+
+        <div class="nav-auth">
+            {% if user.is_authenticated %}
+                <div class="user-dropdown">
+                    <button class="user-btn">
+                        <i class="fas fa-user"></i>
+                        {{ user.username }}
+                    </button>
+                    <div class="dropdown-content">
+    <a href="{% url 'profile' %}"><i class="fas fa-user"></i> Профиль</a>
+    <a href="{% url 'my_bookings' %}"><i class="fas fa-calendar"></i> Мои записи</a>
+    <!-- Изменено: вместо прямой ссылки - кнопка для модального окна -->
+    <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+</div>
+                </div>
+            {% else %}
+                <!-- Изменено: вместо ссылок на страницы - кнопки для модальных окон -->
+                <button class="auth-btn login-btn" id="openLoginModal">Войти</button>
+                <button class="auth-btn register-btn" id="openRegisterModal">Зарегистрироваться</button>
+            {% endif %}
+        </div>
+    </div>
+</nav>

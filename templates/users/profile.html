@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Профиль - Paddle Booking{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-sidebar">
+        <div class="profile-header">
+            <i class="fas fa-user-circle"></i>
+            <h2>{{ user.username }}</h2>
+            <p>{{ user.email }}</p>
+        </div>
+        
+        <div class="profile-menu">
+            <a href="{% url 'profile' %}" class="profile-menu-item {% if request.path == '/users/profile/' %}active{% endif %}">
+                <i class="fas fa-user"></i> Данные
+            </a>
+            <a href="{% url 'my_bookings' %}" class="profile-menu-item {% if request.path == '/users/profile/bookings/' %}active{% endif %}">
+                <i class="fas fa-calendar"></i> Мои записи
+            </a>
+        </div>
+    </div>
+    
+    <div class="profile-content">
+        <h2>Личные данные</h2>
+        <div class="profile-info">
+            <div class="info-item">
+                <label>Имя пользователя:</label>
+                <span>{{ user.username }}</span>
+            </div>
+            <div class="info-item">
+                <label>Email:</label>
+                <span>{{ user.email }}</span>
+            </div>
+            <div class="info-item">
+                <label>Дата регистрации:</label>
+                <span>{{ user.date_joined|date:"d.m.Y" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Последний вход:</label>
+                <span>{{ user.last_login|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

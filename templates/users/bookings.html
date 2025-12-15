@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои бронирования - Paddle Booking{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Мои бронирования</h1>
+    <p>Здесь отображаются все ваши бронирования кортов</p>
+</div>
+
+<div class="bookings-container">
+        {% if bookings %}
+            <div class="bookings-list">
+                {% for booking in bookings %}
+                <div class="booking-card">
+                    <div class="booking-header">
+                        <h3>{{ booking.court.name }}</h3>
+                        <span class="booking-status status-{{ booking.status }}">
+                            {% if booking.status == 'pending' %}
+                                В ожидании
+                            {% elif booking.status == 'confirmed' %}
+                                Подтверждено
+                            {% elif booking.status == 'cancelled' %}
+                                Отменено
+                            {% endif %}
+                        </span>
+                        </div>
+
+                    <div class="booking-details">
+                        <div class="booking-detail">
+                            <i class="fas fa-calendar"></i>
+                            <span>{{ booking.date|date:"d.m.Y" }}</span>
+                        </div>
+                        <div class="booking-detail">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+                    </div>
+                        <div class="booking-detail">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <span>{{ booking.court.price_per_hour }} ₽/час</span>
+                </div>
+                    </div>
+
+                    <div class="booking-actions">
+                        {% if booking.status == 'pending' or booking.status == 'confirmed' %}
+                            {% if booking.date >= today %}
+                                <form method="post" action="{% url 'cancel_booking' booking.id %}" class="cancel-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-danger cancel-booking-btn">
+                                        <i class="fas fa-times"></i> Отменить
+                                    </button>
+                                </form>
+        {% endif %}
+                        {% endif %}
+    </div>
+</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-bookings">
+            <i class="fas fa-calendar-times"></i>
+            <h2>У вас пока нет бронирований</h2>
+            <p>Забронируйте корт прямо сейчас!</p>
+            <a href="{% url 'booking' %}" class="btn-primary">Перейти к бронированию</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .bookings-container {
+        margin-top: 30px;
+    }
+
+    .bookings-list {
+    display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+}
+
+    .booking-card {
+.detail {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail i {
+    color: var(--primary-color);
+}
+
+.no-bookings {
+    text-align: center;
+    padding: 40px;
+}
+
+.no-bookings i {
+    font-size: 4rem;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.no-bookings h3 {
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+}
+</style>
+{% endblock %}
