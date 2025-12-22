@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Профиль - Paddle Booking{% endblock %}
 
@@ -16,10 +17,48 @@
     </div>
 
     <div class="profile-content">
-        <div class="profile-header">
-            <i class="fas fa-user-circle"></i>
-            <h2>{{ user.username }}</h2>
-            <p>{{ user.email|default:"Email не указан" }}</p>
+        <!-- АВАТАРКА ПЕРЕДВИНУТА СЮДА - НАД НИКНЕЙМОМ -->
+        <div class="profile-header-with-avatar">
+            <div class="avatar-container">
+                <div class="avatar-wrapper" id="avatarWrapper">
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" alt="Аватар {{ user.username }}"
+                             class="avatar-image" id="avatarImage">
+                    {% else %}
+                        <div class="avatar-placeholder" id="avatarPlaceholder">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                    {% endif %}
+                    <div class="avatar-overlay" id="avatarOverlay">
+                        <i class="fas fa-plus"></i>
+                        <span>Изменить аватар</span>
+                    </div>
+                    <input type="file" id="avatarInput" accept=".jpg,.jpeg,.png,.gif,.webp" style="display: none;">
+                </div>
+                <div class="avatar-controls" id="avatarControls" style="display: none;">
+                    <button class="avatar-btn confirm-btn" id="confirmAvatarBtn" title="Сохранить">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="avatar-btn cancel-btn" id="cancelAvatarBtn" title="Отмена">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% if user.profile.avatar %}
+                        <button class="avatar-btn delete-btn" id="deleteAvatarBtn" title="Удалить аватар">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="avatar-message" id="avatarMessage" style="display: none;"></div>
+            </div>
+
+            <div class="profile-header-info">
+                <h2>{{ user.username }}</h2>
+                {% if user.email %}
+                    <p id="emailDisplay">{{ user.email }}</p>
+                {% else %}
+                    <p id="emailDisplay" class="no-email">Email не указан</p>
+                {% endif %}
+            </div>
         </div>
 
         <h2>Личные данные</h2>
@@ -28,15 +67,34 @@
                 <label>Имя пользователя:</label>
                 <span>{{ user.username }}</span>
             </div>
-            <div class="info-item">
+            <div class="info-item email-item">
                 <label>Email:</label>
-                <span>{{ user.email|default:"Не указан" }}</span>
+                <div class="email-container">
+                    {% if user.email %}
+                        <span id="emailValue" class="email-value">{{ user.email }}</span>
+                        <button id="editEmailBtn" class="edit-btn" title="Изменить email">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    {% else %}
+                        <div class="email-input-container">
+                            <input type="email" id="emailInput" class="email-input"
+                                   placeholder="Введите ваш email">
+                            <button id="saveEmailBtn" class="save-btn" title="Сохранить email">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button id="cancelEmailBtn" class="cancel-btn" title="Отмена" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="emailError" class="error-message" style="display: none;"></div>
+                    {% endif %}
+                </div>
             </div>
             <div class="info-item">
                 <label>Телефон:</label>
                 <span class="phone-display">
                     {% if user.profile %}
-                        {{ user.profile.phone }}
+                        <span id="phoneValue">{{ user.profile.phone }}</span>
                         {% if user.profile.phone_verified %}
                             <span class="verified-tag"><i class="fas fa-check"></i> Подтвержден</span>
                         {% else %}
@@ -63,18 +121,31 @@
         <div class="phone-verification">
             <h3>Подтверждение телефона</h3>
             <p>Ваш телефон {{ user.profile.phone }} не подтвержден. Для полного доступа к функциям бронирования подтвердите номер телефона.</p>
-            <form method="post" class="verification-form">
+
+            {% if verification_success %}
+                <div class="verification-success">
+                    <i class="fas fa-check-circle"></i> {{ verification_success }}
+                </div>
+            {% elif verification_error %}
+                <div class="verification-error">
+                    <i class="fas fa-exclamation-circle"></i> {{ verification_error }}
+                </div>
+            {% endif %}
+
+            <form id="verificationForm" method="post" class="verification-form">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="verification_code">Код подтверждения</label>
                     <input type="text" id="verification_code" name="verification_code"
-                           placeholder="Введите код из SMS" maxlength="6">
+                           placeholder="Введите код из SMS" maxlength="6" required>
                 </div>
                 <div class="verification-actions">
                     <button type="submit" class="btn-primary">Подтвердить</button>
                     <button type="button" class="btn-secondary" id="resendCode">Отправить код повторно</button>
                 </div>
             </form>
+
+            <div id="verificationMessage" class="verification-message" style="display: none;"></div>
         </div>
         {% endif %}
     </div>
@@ -149,26 +220,27 @@
     border: 2px solid #f5f5f5;
 }
 
-.profile-header {
-    text-align: center;
+/* НОВЫЙ СТИЛЬ ДЛЯ ЗАГОЛОВКА С АВАТАРКОЙ */
+.profile-header-with-avatar {
+    display: flex;
+    align-items: center;
+    gap: 30px;
     padding-bottom: 25px;
     margin-bottom: 25px;
     border-bottom: 2px solid #f0f0f0;
 }
 
-.profile-header i {
-    font-size: 5rem;
-    color: var(--primary-color);
-    margin-bottom: 15px;
+.profile-header-info {
+    flex: 1;
 }
 
-.profile-header h2 {
+.profile-header-info h2 {
     margin: 0 0 8px;
     color: var(--dark-color);
     font-size: 1.8rem;
 }
 
-.profile-header p {
+.profile-header-info p {
     color: var(--gray-color);
     margin: 0;
     font-size: 0.95rem;
@@ -359,6 +431,393 @@
     box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
 }
 
+.profile-info .email-item {
+    position: relative;
+}
+
+.email-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.email-value {
+    color: var(--dark-color);
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    flex: 1;
+}
+
+.email-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.email-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    background: white;
+}
+
+.email-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(158, 240, 26, 0.2);
+}
+
+.email-input.invalid {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+.edit-btn, .save-btn, .cancel-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.edit-btn {
+    background: linear-gradient(135deg, var(--primary-light) 0%, #e8ffc4 100%);
+    color: var(--dark-color);
+    border: 2px solid var(--primary-light);
+}
+
+.edit-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(158, 240, 26, 0.3);
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: 2px solid #28a745;
+}
+
+.save-btn:hover {
+    background: linear-gradient(135deg, #20c997 0%, #198754 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.cancel-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    color: white;
+    border: 2px solid #6c757d;
+}
+
+.cancel-btn:hover {
+    background: linear-gradient(135deg, #545b62 0%, #3a3f44 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.no-email {
+    color: var(--gray-color);
+    font-style: italic;
+}
+
+.error-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid var(--danger-color);
+    color: #721c24;
+    font-size: 0.9rem;
+}
+
+.verification-success {
+    margin: 15px 0;
+    padding: 12px 16px;
+    background: rgba(40, 167, 69, 0.1);
+    border-radius: 8px;
+    border: 2px solid #28a745;
+    color: #155724;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.verification-success i {
+    color: #28a745;
+    font-size: 1.2rem;
+}
+
+.verification-error {
+    margin: 15px 0;
+    padding: 12px 16px;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 8px;
+    border: 2px solid var(--danger-color);
+    color: #721c24;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.verification-error i {
+    color: var(--danger-color);
+    font-size: 1.2rem;
+}
+
+.verification-message {
+    margin-top: 15px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    display: none;
+}
+
+.verification-message.success {
+    background: rgba(40, 167, 69, 0.1);
+    border: 2px solid #28a745;
+    color: #155724;
+}
+
+.verification-message.error {
+    background: rgba(220, 53, 69, 0.1);
+    border: 2px solid var(--danger-color);
+    color: #721c24;
+}
+
+.success-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(40, 167, 69, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid #28a745;
+    color: #155724;
+    font-size: 0.9rem;
+    display: none;
+}
+
+/* Стили для аватарки */
+.avatar-container {
+    text-align: center;
+    position: relative;
+}
+
+.avatar-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, var(--primary-light) 0%, #e8ffc4 100%);
+    border: 3px solid white;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.avatar-wrapper:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(158, 240, 26, 0.3);
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    border-radius: 50%;
+}
+
+.avatar-placeholder i {
+    font-size: 60px;
+    color: white;
+    opacity: 0.8;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: white;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.avatar-overlay i {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: var(--primary-color);
+}
+
+.avatar-overlay span {
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.3;
+}
+
+.avatar-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.avatar-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.avatar-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.confirm-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.confirm-btn:hover {
+    background: linear-gradient(135deg, #20c997 0%, #198754 100%);
+}
+
+.cancel-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: linear-gradient(135deg, #545b62 0%, #3a3f44 100%);
+}
+
+.delete-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.delete-btn:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+}
+
+.avatar-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.avatar-message.success {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid #28a745;
+    color: #155724;
+}
+
+.avatar-message.error {
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid #dc3545;
+    color: #721c24;
+}
+
+.avatar-message.info {
+    background: rgba(13, 110, 253, 0.1);
+    border: 1px solid #0d6efd;
+    color: #0a58ca;
+}
+
+.avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    animation: zoomIn 0.3s ease;
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 @media (max-width: 992px) {
     .profile-container {
         grid-template-columns: 1fr;
@@ -406,6 +865,60 @@
         align-items: flex-start;
         gap: 8px;
     }
+
+    .email-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .email-value {
+        text-align: center;
+    }
+
+    .edit-btn, .save-btn, .cancel-btn {
+        align-self: center;
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .verification-actions {
+        flex-direction: column;
+    }
+
+    .verification-actions button {
+        width: 100%;
+    }
+
+    /* Адаптивность для аватарки в мобильной версии */
+    .profile-header-with-avatar {
+        flex-direction: column;
+        text-align: center;
+        gap: 20px;
+    }
+
+    .avatar-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+
+    .avatar-placeholder i {
+        font-size: 50px;
+    }
+
+    .avatar-overlay i {
+        font-size: 20px;
+    }
+
+    .avatar-overlay span {
+        font-size: 10px;
+    }
+
+    .avatar-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
 }
 
 @media (max-width: 576px) {
@@ -415,11 +928,7 @@
         border-radius: 12px;
     }
 
-    .profile-header i {
-        font-size: 4rem;
-    }
-
-    .profile-header h2 {
+    .profile-header-info h2 {
         font-size: 1.5rem;
     }
 
@@ -444,31 +953,645 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const csrftoken = getCookie('csrftoken');
+
+    // ========== АВАТАРКА ==========
+    const avatarWrapper = document.getElementById('avatarWrapper');
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarImage = document.getElementById('avatarImage');
+    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+    const avatarControls = document.getElementById('avatarControls');
+    const confirmAvatarBtn = document.getElementById('confirmAvatarBtn');
+    const cancelAvatarBtn = document.getElementById('cancelAvatarBtn');
+    const deleteAvatarBtn = document.getElementById('deleteAvatarBtn');
+    const avatarMessage = document.getElementById('avatarMessage');
+
+    let selectedFile = null;
+    let previewUrl = null;
+
+    // Обработчик клика на аватарку
+    if (avatarWrapper) {
+        avatarWrapper.addEventListener('click', function(e) {
+            if (e.target !== avatarInput) {
+                avatarInput.click();
+            }
+        });
+
+        // Показываем оверлей при наведении
+        avatarWrapper.addEventListener('mouseenter', function() {
+            this.querySelector('.avatar-overlay').style.opacity = '1';
+        });
+
+        avatarWrapper.addEventListener('mouseleave', function() {
+            if (!selectedFile) {
+                this.querySelector('.avatar-overlay').style.opacity = '0';
+            }
+        });
+    }
+
+    // Обработчик выбора файла
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                selectedFile = this.files[0];
+
+                // Валидация файла
+                if (!validateAvatarFile(selectedFile)) {
+                    showAvatarMessage('Недопустимый файл. Разрешены: JPG, PNG, GIF, WebP до 5MB', 'error');
+                    resetAvatarSelection();
+                    return;
+                }
+
+                // Создаем превью
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewUrl = e.target.result;
+
+                    // Показываем превью
+                    if (avatarImage) {
+                        avatarImage.src = previewUrl;
+                    } else if (avatarPlaceholder) {
+                        // Скрываем плейсхолдер и создаем изображение
+                        avatarPlaceholder.style.display = 'none';
+                        const newImg = document.createElement('img');
+                        newImg.src = previewUrl;
+                        newImg.className = 'avatar-image avatar-preview';
+                        newImg.alt = 'Превью аватарки';
+                        avatarWrapper.insertBefore(newImg, avatarWrapper.firstChild);
+                    }
+
+                    // Показываем кнопки управления
+                    if (avatarControls) {
+                        avatarControls.style.display = 'flex';
+                    }
+
+                    // Показываем оверлей постоянно
+                    const overlay = document.querySelector('.avatar-overlay');
+                    if (overlay) {
+                        overlay.style.opacity = '1';
+                        overlay.innerHTML = '<i class="fas fa-check"></i><span>Подтвердить выбор</span>';
+                    }
+                };
+                reader.readAsDataURL(selectedFile);
+
+                showAvatarMessage('Файл выбран. Нажмите "Сохранить" для загрузки', 'info');
+            }
+        });
+    }
+
+    // Подтверждение загрузки
+    if (confirmAvatarBtn) {
+        confirmAvatarBtn.addEventListener('click', function() {
+            if (!selectedFile) {
+                showAvatarMessage('Сначала выберите файл', 'error');
+                return;
+            }
+
+            uploadAvatar(selectedFile);
+        });
+    }
+
+    // Отмена выбора
+    if (cancelAvatarBtn) {
+        cancelAvatarBtn.addEventListener('click', function() {
+            resetAvatarSelection();
+            showAvatarMessage('Выбор отменен', 'info');
+        });
+    }
+
+    // Удаление аватарки
+    if (deleteAvatarBtn) {
+        deleteAvatarBtn.addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить аватарку?')) {
+                deleteAvatar();
+            }
+        });
+    }
+
+    // Функции для работы с аватаркой
+    function validateAvatarFile(file) {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!allowedTypes.includes(file.type)) {
+            return false;
+        }
+
+        if (file.size > maxSize) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function resetAvatarSelection() {
+        selectedFile = null;
+        previewUrl = null;
+
+        // Сбрасываем input файла
+        if (avatarInput) {
+            avatarInput.value = '';
+        }
+
+        // Восстанавливаем исходное состояние
+        if (avatarImage && avatarImage.src.includes('blob:')) {
+            // Если было превью, удаляем его
+            const preview = avatarWrapper.querySelector('.avatar-preview');
+            if (preview) {
+                preview.remove();
+            }
+
+            // Показываем плейсхолдер
+            if (avatarPlaceholder) {
+                avatarPlaceholder.style.display = 'flex';
+            }
+
+            // Восстанавливаем оригинальную аватарку если есть
+            const originalSrc = avatarImage.getAttribute('data-original-src');
+            if (originalSrc) {
+                avatarImage.src = originalSrc;
+            }
+        }
+
+        // Скрываем кнопки управления
+        if (avatarControls) {
+            avatarControls.style.display = 'none';
+        }
+
+        // Восстанавливаем оверлей
+        const overlay = document.querySelector('.avatar-overlay');
+        if (overlay) {
+            overlay.innerHTML = '<i class="fas fa-plus"></i><span>Изменить аватар</span>';
+            overlay.style.opacity = '0';
+        }
+    }
+
+    function uploadAvatar(file) {
+        // Показываем индикатор загрузки
+        if (confirmAvatarBtn) {
+            confirmAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            confirmAvatarBtn.disabled = true;
+
+        }
+
+        // Создаем FormData
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        // Отправляем запрос
+        fetch('/users/ajax/upload-avatar/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAvatarMessage(data.message, 'success');
+
+                // Обновляем аватарку на странице
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAvatarMessage(data.message, 'error');
+
+                // Восстанавливаем кнопку
+                if (confirmAvatarBtn) {
+                    confirmAvatarBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    confirmAvatarBtn.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            showAvatarMessage('Ошибка при загрузке файла', 'error');
+
+            // Восстанавливаем кнопку
+            if (confirmAvatarBtn) {
+                confirmAvatarBtn.innerHTML = '<i class="fas fa-check"></i>';
+                confirmAvatarBtn.disabled = false;
+            }
+        });
+    }
+
+    function deleteAvatar() {
+        // Показываем индикатор загрузки
+        if (deleteAvatarBtn) {
+            deleteAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            deleteAvatarBtn.disabled = true;
+        }
+
+        // Отправляем запрос
+        fetch('/users/ajax/delete-avatar/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAvatarMessage(data.message, 'success');
+
+                // Обновляем страницу
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAvatarMessage(data.message, 'error');
+
+                // Восстанавливаем кнопку
+                if (deleteAvatarBtn) {
+                    deleteAvatarBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteAvatarBtn.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            showAvatarMessage('Ошибка при удалении аватарки', 'error');
+
+            // Восстанавливаем кнопку
+            if (deleteAvatarBtn) {
+                deleteAvatarBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteAvatarBtn.disabled = false;
+            }
+        });
+    }
+
+    function showAvatarMessage(message, type) {
+        if (avatarMessage) {
+            avatarMessage.textContent = message;
+            avatarMessage.className = `avatar-message ${type}`;
+            avatarMessage.style.display = 'block';
+
+            // Автоматически скрываем через 5 секунд
+            setTimeout(() => {
+                avatarMessage.style.opacity = '0';
+                avatarMessage.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                    avatarMessage.style.display = 'none';
+                    avatarMessage.style.opacity = '1';
+                }, 500);
+            }, 5000);
+        }
+    }
+
+    // ========== EMAIL И ТЕЛЕФОН ==========
+    const editEmailBtn = document.getElementById('editEmailBtn');
+    const saveEmailBtn = document.getElementById('saveEmailBtn');
+    const cancelEmailBtn = document.getElementById('cancelEmailBtn');
+    const emailInput = document.getElementById('emailInput');
+    const emailValue = document.getElementById('emailValue');
+    const emailDisplay = document.getElementById('emailDisplay');
+    const emailError = document.getElementById('emailError');
+    const emailContainer = document.querySelector('.email-container');
+
+    // Если email уже есть, добавляем кнопку редактирования
+    if (editEmailBtn) {
+        editEmailBtn.addEventListener('click', function() {
+            const currentEmail = emailValue.textContent;
+
+            // Заменяем отображение на поле ввода
+            emailContainer.innerHTML = `
+                <div class="email-input-container">
+                    <input type="email" id="emailInput" class="email-input"
+                           value="${currentEmail}" placeholder="Введите ваш email">
+                    <button id="saveEmailBtn" class="save-btn" title="Сохранить email">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button id="cancelEmailBtn" class="cancel-btn" title="Отмена">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="emailError" class="error-message" style="display: none;"></div>
+            `;
+
+            // Добавляем обработчики для новых кнопок
+            setupEmailEditHandlers();
+        });
+    }
+
+    // Функция для настройки обработчиков редактирования email
+    function setupEmailEditHandlers() {
+        const newSaveBtn = document.getElementById('saveEmailBtn');
+        const newCancelBtn = document.getElementById('cancelEmailBtn');
+        const newEmailInput = document.getElementById('emailInput');
+        const newEmailError = document.getElementById('emailError');
+
+        if (newSaveBtn) {
+            newSaveBtn.addEventListener('click', function() {
+                const email = newEmailInput.value.trim();
+
+                // Валидация email
+                if (!email) {
+                    showEmailError('Пожалуйста, введите email');
+                    return;
+                }
+
+                if (!isValidEmail(email)) {
+                    showEmailError('Введите корректный email адрес');
+                    return;
+                }
+
+                // Показываем индикатор загрузки
+                newSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                newSaveBtn.disabled = true;
+
+                // Отправляем запрос на сервер
+                fetch('/users/ajax/update-email/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `email=${encodeURIComponent(email)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Успешно обновлено
+                        emailContainer.innerHTML = `
+                            <span id="emailValue" class="email-value">${data.email}</span>
+                            <button id="editEmailBtn" class="edit-btn" title="Изменить email">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        `;
+
+                        // Обновляем email в заголовке профиля
+                        if (emailDisplay) {
+                            emailDisplay.textContent = data.email;
+                            emailDisplay.className = '';
+                        }
+
+                        // Показываем сообщение об успехе
+                        showSuccessMessage('Email успешно обновлен!');
+
+                        // Возвращаем обработчик для кнопки редактирования
+                        document.getElementById('editEmailBtn').addEventListener('click', function() {
+                            const currentEmail = document.getElementById('emailValue').textContent;
+                            emailContainer.innerHTML = `
+                                <div class="email-input-container">
+                                    <input type="email" id="emailInput" class="email-input"
+                                           value="${currentEmail}" placeholder="Введите ваш email">
+                                    <button id="saveEmailBtn" class="save-btn" title="Сохранить email">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button id="cancelEmailBtn" class="cancel-btn" title="Отмена">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="emailError" class="error-message" style="display: none;"></div>
+                            `;
+                            setupEmailEditHandlers();
+                        });
+                    } else {
+                        // Ошибка
+                        showEmailError(data.message || 'Ошибка при обновлении email');
+                        newSaveBtn.innerHTML = '<i class="fas fa-check"></i>';
+                        newSaveBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    showEmailError('Произошла ошибка при обновлении email');
+                    newSaveBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    newSaveBtn.disabled = false;
+                });
+            });
+        }
+
+        if (newCancelBtn) {
+            newCancelBtn.addEventListener('click', function() {
+                const currentEmail = emailValue ? emailValue.textContent : '';
+
+                if (currentEmail) {
+                    // Возвращаем к отображению email
+                    emailContainer.innerHTML = `
+                        <span id="emailValue" class="email-value">${currentEmail}</span>
+                        <button id="editEmailBtn" class="edit-btn" title="Изменить email">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    `;
+
+                    // Возвращаем обработчик
+                    document.getElementById('editEmailBtn').addEventListener('click', function() {
+                        const currentEmail = document.getElementById('emailValue').textContent;
+                        emailContainer.innerHTML = `
+                            <div class="email-input-container">
+                                <input type="email" id="emailInput" class="email-input"
+                                       value="${currentEmail}" placeholder="Введите ваш email">
+                                <button id="saveEmailBtn" class="save-btn" title="Сохранить email">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button id="cancelEmailBtn" class="cancel-btn" title="Отмена">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="emailError" class="error-message" style="display: none;"></div>
+                        `;
+                        setupEmailEditHandlers();
+                    });
+                } else {
+                    // Если email не был установлен, показываем поле ввода заново
+                    emailContainer.innerHTML = `
+                        <div class="email-input-container">
+                            <input type="email" id="emailInput" class="email-input"
+                                   placeholder="Введите ваш email">
+                            <button id="saveEmailBtn" class="save-btn" title="Сохранить email">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                        <div id="emailError" class="error-message" style="display: none;"></div>
+                    `;
+                    setupEmailEditHandlers();
+                }
+            });
+        }
+
+        // Валидация при вводе
+        if (newEmailInput) {
+            newEmailInput.addEventListener('input', function() {
+                newEmailInput.classList.remove('invalid');
+                if (newEmailError) newEmailError.style.display = 'none';
+            });
+
+            // Сохранение по Enter
+            newEmailInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    if (newSaveBtn) newSaveBtn.click();
+                }
+            });
+        }
+    }
+
+    // Если изначально нет email, настраиваем обработчики
+    if (saveEmailBtn && emailInput) {
+        setupEmailEditHandlers();
+    }
+
+    // ========== ПОДТВЕРЖДЕНИЕ ТЕЛЕФОНА ==========
+    const verificationForm = document.getElementById('verificationForm');
     const resendBtn = document.getElementById('resendCode');
+    const verificationMessage = document.getElementById('verificationMessage');
+
+    if (verificationForm) {
+        verificationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(verificationForm);
+            const code = formData.get('verification_code');
+
+            if (!code || code.trim() === '') {
+                showVerificationMessage('Введите код подтверждения', 'error');
+                return;
+            }
+
+            // Показываем индикатор загрузки
+            const submitBtn = verificationForm.querySelector('.btn-primary');
+            const originalText = submitBtn.textContent;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Подтверждение...';
+            submitBtn.disabled = true;
+
+            // Отправляем AJAX запрос
+            fetch('/users/ajax/verify-phone/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `verification_code=${encodeURIComponent(code)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Успешное подтверждение
+                    showVerificationMessage(data.message, 'success');
+
+                    // Обновляем интерфейс
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Ошибка
+                    showVerificationMessage(data.message || 'Ошибка при подтверждении', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                showVerificationMessage('Произошла ошибка при подтверждении', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
 
     if (resendBtn) {
         resendBtn.addEventListener('click', function() {
-            fetch('/users/profile/resend-code/', {
+            // Показываем индикатор загрузки
+            resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+            resendBtn.disabled = true;
+
+            fetch('/users/ajax/resend-verification-code/', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-CSRFToken': csrftoken,
                     'Content-Type': 'application/json'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Новый код подтверждения отправлен на ваш телефон');
+                    showVerificationMessage(data.message, 'success');
                 } else {
-                    alert('Ошибка: ' + data.message);
+                    showVerificationMessage('Ошибка: ' + data.message, 'error');
                 }
+
+                // Возвращаем кнопку в исходное состояние
+                setTimeout(() => {
+                    resendBtn.innerHTML = 'Отправить код повторно';
+                    resendBtn.disabled = false;
+                }, 2000);
             })
             .catch(error => {
-                alert('Произошла ошибка при отправке кода');
+                showVerificationMessage('Произошла ошибка при отправке кода', 'error');
+                resendBtn.innerHTML = 'Отправить код повторно';
+                resendBtn.disabled = false;
             });
         });
     }
 
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function showEmailError(message) {
+        if (emailError) {
+            emailError.textContent = message;
+            emailError.style.display = 'block';
+        }
+
+        if (emailInput) {
+            emailInput.classList.add('invalid');
+            emailInput.focus();
+        }
+    }
+
+    function showSuccessMessage(message) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-message';
+        successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        successDiv.style.display = 'block';
+
+        // Добавляем сообщение под полем email
+        const emailItem = document.querySelector('.email-item');
+        if (emailItem) {
+            // Удаляем предыдущее сообщение если есть
+            const existingMessage = emailItem.querySelector('.success-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            emailItem.appendChild(successDiv);
+
+            // Убираем сообщение через 3 секунды
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.style.opacity = '0';
+                    successDiv.style.transition = 'opacity 0.5s';
+                    setTimeout(() => {
+                        if (successDiv.parentNode) {
+                            successDiv.remove();
+                        }
+                    }, 500);
+                }
+            }, 3000);
+        }
+    }
+
+    function showVerificationMessage(message, type) {
+        if (verificationMessage) {
+            verificationMessage.textContent = message;
+            verificationMessage.className = `verification-message ${type}`;
+            verificationMessage.style.display = 'block';
+
+            // Автоматически скрываем через 5 секунд
+            setTimeout(() => {
+                verificationMessage.style.opacity = '0';
+                verificationMessage.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                    verificationMessage.style.display = 'none';
+                    verificationMessage.style.opacity = '1';
+                }, 500);
+            }, 5000);
+        }
+    }
+
+    // Функция для работы с cookies
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

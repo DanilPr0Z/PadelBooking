@@ -6,6 +6,13 @@ from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 import re
+import random
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import os
+from PIL import Image
+import io
+from django.conf import settings
 
 
 class UserProfileManager(models.Manager):
@@ -78,7 +85,7 @@ class UserProfile(models.Model):
     phone = models.CharField(
         validators=[phone_regex],
         max_length=17,
-        unique=True,  # УНИКАЛЬНЫЙ
+        unique=True,
         verbose_name='Номер телефона'
     )
 
@@ -161,17 +168,115 @@ class UserProfile(models.Model):
     def generate_verification_code(self):
         """Генерация кода подтверждения телефона"""
         import random
-        self.verification_code = f"{random.randint(1000, 9999)}"
+        self.verification_code = f"{random.randint(100000, 999999)}"
         self.save()
+        print(
+            f"ГЕНЕРАЦИЯ КОДА: Для пользователя {self.user.username}, телефон {self.phone}, код: {self.verification_code}")
         return self.verification_code
 
     def verify_phone(self, code):
         """Подтверждение телефона"""
-        if self.verification_code == code:
+        print(f"ПРОВЕРКА КОДА ДЛЯ {self.user.username}:")
+        print(f"  Введенный код: {code}")
+        print(f"  Код в БД: {self.verification_code}")
+        print(f"  Тип введенного: {type(code)}")
+        print(f"  Тип в БД: {type(self.verification_code)}")
+        print(f"  Совпадение: {str(self.verification_code) == str(code)}")
+
+        if self.verification_code and str(self.verification_code) == str(code):
             self.phone_verified = True
             self.verification_code = None
             self.save()
+            print(f"  ✅ ТЕЛЕФОН ПОДТВЕРЖДЕН!")
             return True
+
+        print(f"  ❌ НЕВЕРНЫЙ КОД!")
+        return False
+
+    def save_avatar(self, image_file):
+        """Сохранение аватарки с обработкой"""
+        try:
+            # Проверяем расширение файла
+            filename = image_file.name.lower()
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            if not any(filename.endswith(ext) for ext in allowed_extensions):
+                raise ValidationError('Недопустимый формат файла. Разрешены: JPG, PNG, GIF, WebP')
+
+            # Проверяем размер файла
+            max_size = 5 * 1024 * 1024  # 5MB
+            if image_file.size > max_size:
+                raise ValidationError(f'Файл слишком большой. Максимальный размер: {max_size // 1024 // 1024}MB')
+
+            # Удаляем старую аватарку если есть
+            if self.avatar:
+                old_path = self.avatar.path
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
+            # Генерируем уникальное имя файла
+            import uuid
+            ext = os.path.splitext(filename)[1]
+            new_filename = f'avatar_{self.user.id}_{uuid.uuid4().hex[:8]}{ext}'
+
+            # Обрабатываем изображение
+            img = Image.open(image_file)
+
+            # Конвертируем в RGB если нужно
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Создаем квадратное изображение
+            width, height = img.size
+            min_size = min(width, height)
+
+            # Обрезаем до квадрата
+            left = (width - min_size) // 2
+            top = (height - min_size) // 2
+            right = (width + min_size) // 2
+            bottom = (height + min_size) // 2
+            img = img.crop((left, top, right, bottom))
+
+            # Изменяем размер до 300x300
+            img = img.resize((300, 300), Image.Resampling.LANCZOS)
+
+            # Сохраняем аватарку
+            buffer = io.BytesIO()
+            img.save(buffer, format='JPEG', quality=85)
+            buffer.seek(0)
+
+            # Сохраняем в поле модели
+            self.avatar.save(new_filename, ContentFile(buffer.read()), save=True)
+
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при сохранении аватарки: {str(e)}")
+            raise ValidationError(f'Ошибка при обработке изображения: {str(e)}')
+
+    def get_avatar_url(self):
+        """Получение URL аватарки"""
+        if self.avatar:
+            return self.avatar.url
+        return None
+
+    def delete_avatar(self):
+        """Удаление аватарки"""
+        if self.avatar:
+            try:
+                # Получаем путь к файлу
+                if hasattr(self.avatar, 'path'):
+                    path = self.avatar.path
+                    if os.path.exists(path):
+                        os.remove(path)
+
+                # Удаляем поле из модели
+                self.avatar.delete(save=False)
+                self.avatar = None
+                self.save()
+                return True
+            except Exception as e:
+                print(f"Ошибка при удалении аватарки: {str(e)}")
+                return False
         return False
 
 

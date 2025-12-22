@@ -5,6 +5,76 @@ from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from .models import UserProfile
 import re
+import os
+
+
+class EmailUpdateForm(forms.ModelForm):
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control email-input',
+            'placeholder': 'Введите email'
+        })
+    )
+
+    class Meta:
+        model = User
+        fields = ['email']
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+
+        # Проверяем уникальность email (исключая текущего пользователя)
+        qs = User.objects.filter(email=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise forms.ValidationError("Этот email уже используется другим пользователем")
+
+        return email
+
+
+class PhoneVerificationForm(forms.Form):
+    verification_code = forms.CharField(
+        max_length=6,
+        min_length=4,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите код из SMS',
+            'maxlength': '6'
+        })
+    )
+
+
+class AvatarUploadForm(forms.Form):
+    avatar = forms.ImageField(
+        required=True,
+        widget=forms.FileInput(attrs={
+            'class': 'avatar-upload-input',
+            'accept': '.jpg,.jpeg,.png,.gif,.webp',
+            'style': 'display: none;'
+        })
+    )
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+
+        if not avatar:
+            raise forms.ValidationError('Выберите файл для загрузки')
+
+        # Проверка размера файла
+        if avatar.size > 5 * 1024 * 1024:  # 5MB
+            raise forms.ValidationError('Размер файла не должен превышать 5MB')
+
+        # Проверка расширения
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        ext = os.path.splitext(avatar.name)[1].lower()
+        if ext not in allowed_extensions:
+            raise forms.ValidationError('Недопустимый формат файла. Разрешены: JPG, PNG, GIF, WebP')
+
+        return avatar
 
 
 class RegistrationForm(UserCreationForm):
