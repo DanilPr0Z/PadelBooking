@@ -2,11 +2,10 @@
     <div class="nav-container">
         <div class="nav-brand">
             <i class="fas fa-table-tennis-paddle-ball"></i>
-            <span>Paddle Booking</span>
+            <a href="{% url 'home' %}">Paddle Booking</a>
         </div>
 
         <div class="nav-menu">
-            <a href="{% url 'home' %}" class="nav-item {% if request.path == '/' %}active{% endif %}">Главная</a>
             <a href="{% url 'news' %}" class="nav-item {% if request.path == '/news/' %}active{% endif %}">Новости</a>
             <a href="{% url 'booking' %}" class="nav-item {% if request.path == '/booking/' %}active{% endif %}">Бронирование</a>
             <a href="{% url 'tournaments' %}" class="nav-item {% if request.path == '/tournaments/' %}active{% endif %}">Турниры</a>
@@ -20,11 +19,10 @@
                         {{ user.username }}
                     </button>
                     <div class="dropdown-content">
-    <a href="{% url 'profile' %}"><i class="fas fa-user"></i> Профиль</a>
-    <a href="{% url 'my_bookings' %}"><i class="fas fa-calendar"></i> Мои записи</a>
-    <!-- Изменено: вместо прямой ссылки - кнопка для модального окна -->
-    <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
-</div>
+                        <a href="{% url 'profile' %}" id="profile-link"><i class="fas fa-user"></i> Профиль</a>
+                        <a href="{% url 'profile' %}" id="bookings-link"><i class="fas fa-calendar"></i> Мои записи</a>
+                        <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+                    </div>
                 </div>
             {% else %}
                 <!-- Изменено: вместо ссылок на страницы - кнопки для модальных окон -->
@@ -34,3 +32,59 @@
         </div>
     </div>
 </nav>
+
+<!-- Модальное окно выхода -->
+<div id="logoutModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div class="logout-confirmation">
+            <i class="fas fa-sign-out-alt"></i>
+            <h2>Выйти из аккаунта</h2>
+            <p>Вы уверены, что хотите выйти из своего аккаунта?</p>
+            <div class="logout-buttons">
+                <button type="button" class="btn-secondary cancel-logout">Отмена</button>
+                <button type="button" class="btn-danger confirm-logout">Выйти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // JavaScript для управления навигацией
+    const profileLink = document.getElementById('profile-link');
+    const bookingsLink = document.getElementById('bookings-link');
+
+    // Сохраняем активную вкладку в sessionStorage
+    if (profileLink) {
+        profileLink.addEventListener('click', function(e) {
+            sessionStorage.setItem('profileActiveTab', 'profile');
+        });
+    }
+
+    if (bookingsLink) {
+        bookingsLink.addEventListener('click', function(e) {
+            e.preventDefault(); // Предотвращаем стандартное поведение
+            sessionStorage.setItem('profileActiveTab', 'bookings');
+            // Перенаправляем на профиль
+            window.location.href = "{% url 'profile' %}";
+        });
+    }
+
+    // При загрузке страницы проверяем, нужно ли открыть вкладку бронирований
+    window.addEventListener('load', function() {
+        const activeTab = sessionStorage.getItem('profileActiveTab');
+        if (activeTab === 'bookings' && window.location.pathname === "{% url 'profile' %}") {
+            // Находим кнопку вкладки бронирований и кликаем по ней
+            setTimeout(() => {
+                const bookingsTabBtn = document.querySelector('.tab-btn[data-tab="bookings"]');
+                if (bookingsTabBtn) {
+                    bookingsTabBtn.click();
+                }
+                // Очищаем хранилище
+                sessionStorage.removeItem('profileActiveTab');
+            }, 100);
+        }
+    });
+});
+</script>

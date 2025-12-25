@@ -1,18 +1,20 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-import json
+
 from django.core.exceptions import ValidationError
-import os
-from django.conf import settings
+
 
 from .forms import RegistrationForm, LoginForm, EmailUpdateForm, PhoneVerificationForm, AvatarUploadForm
-from .models import UserProfile
-from booking.models import Booking
 
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Prefetch, Count, Q
+from datetime import datetime, timedelta
+from booking.models import Booking, Court
 
 @require_POST
 @csrf_exempt
@@ -152,36 +154,16 @@ def register(request):
     return render(request, 'users/register.html', {'form': form})
 
 
-@login_required
-def profile(request):
-    """Страница профиля с обработкой подтверждения телефона"""
-    verification_success = None
-    verification_error = None
-
-    if request.method == 'POST':
-        # Обработка подтверждения телефона (традиционная форма)
-        if 'verification_code' in request.POST:
-            form = PhoneVerificationForm(request.POST)
-            if form.is_valid():
-                code = form.cleaned_data['verification_code']
-
-                # Проверяем код
-                if request.user.profile.verify_phone(code):
-                    verification_success = 'Телефон успешно подтвержден!'
-                else:
-                    verification_error = 'Неверный код подтверждения'
-            else:
-                verification_error = 'Неверный формат кода'
-
-    return render(request, 'users/profile.html', {
-        'verification_success': verification_success,
-        'verification_error': verification_error
-    })
+# ✅ УДАЛЕНО: конфликтующая функция profile, теперь она в booking/views.py
+# @login_required
+# def profile(request):
+#     """Страница профиля с обработкой подтверждения телефона"""
+#     ... старый код ...
 
 
 def user_logout(request):
     logout(request)
-    return redirect('home')
+    return redirect('home.html')
 
 
 @require_POST
@@ -468,3 +450,91 @@ def update_profile(request):
             'success': False,
             'message': f'Ошибка сервера: {str(e)}'
         }, status=500)
+
+
+
+@login_required
+def profile(request):
+    """
+    Объединенный профиль пользователя с вкладками:
+    - Профиль (данные пользователя)
+    - Мои бронирования
+    - История
+    - Настройки
+    """
+    from django.contrib.auth.models import User
+
+    # Получаем пользователя с профилем
+    try:
+        user = User.objects.select_related('profile').get(id=request.user.id)
+    except User.DoesNotExist:
+        user = request.user
+
+    # Получаем бронирования с оптимизацией запросов
+    bookings = Booking.objects.filter(
+        user=request.user
+    ).select_related(
+        'court'  # JOIN вместо отдельных запросов
+    ).order_by(
+        '-date', '-start_time'
+    )
+
+    today = timezone.now().date()
+    current_time = timezone.now().time()
+
+    # Обрабатываем каждое бронирование
+    for booking in bookings:
+        booking.today = today
+
+        # Рассчитываем полную дату начала бронирования
+        booking_datetime = timezone.make_aware(
+            datetime.combine(booking.date, booking.start_time)
+        )
+
+        # Можно ли подтвердить? (за 24 часа до начала)
+        time_diff = booking_datetime - timezone.now()
+        booking.can_confirm_attr = timedelta(hours=0) < time_diff <= timedelta(hours=24)
+
+        # Сколько часов осталось до возможности подтверждения
+        if time_diff > timedelta(hours=24):
+            hours_until = (time_diff - timedelta(hours=24)).total_seconds() / 3600
+            booking.hours_until_confirmation_attr = max(0, int(hours_until))
+        else:
+            booking.hours_until_confirmation_attr = 0
+
+        # Прошедшее ли бронирование?
+        booking.is_past = booking.date < today or (
+                booking.date == today and booking.start_time < current_time
+        )
+
+        # Можно ли отменить? (не прошедшее и не отмененное)
+        booking.can_cancel = (
+                not booking.is_past and
+                booking.status in ['pending', 'confirmed']
+        )
+
+    # Статистика для пользователя
+    booking_stats = {
+        'total': bookings.count(),
+        'confirmed': bookings.filter(status='confirmed').count(),
+        'pending': bookings.filter(status='pending').count(),
+        'cancelled': bookings.filter(status='cancelled').count(),
+        'upcoming': bookings.filter(
+            Q(date__gt=today) |
+            Q(date=today, start_time__gt=current_time),
+            status__in=['pending', 'confirmed']
+        ).count(),
+    }
+
+    # Получаем активную вкладку из GET-параметра или session
+    active_tab = request.GET.get('tab', 'bookings')
+
+    context = {
+        'user': user,
+        'bookings': bookings,
+        'today': today,
+        'booking_stats': booking_stats,
+        'active_tab': active_tab,
+    }
+
+    return render(request, 'users/profile.html', context)

@@ -1361,3 +1361,575 @@ footer {
         width: 100%;
     }
 }
+
+/* ========== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ КНОПОК И УВЕДОМЛЕНИЙ ========== */
+
+/* Кнопки действий */
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #20c997 0%, #198754 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: var(--dark-color);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-color) 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(158, 240, 26, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    width: 350px;
+    animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.success-notification {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    gap: 15px;
+}
+
+.notification-content i {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-text h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2rem;
+}
+
+.notification-text p {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.close-notification {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+
+.close-notification:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Уведомление об ошибке */
+.error-notification {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);
+}
+
+/* Адаптивность уведомлений */
+@media (max-width: 768px) {
+    .notification {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        top: 10px;
+    }
+}
+
+/* Стили для модальных окон подтверждения/отмены */
+.confirmation-content {
+    text-align: center;
+}
+
+.confirmation-content i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    display: block;
+}
+
+#confirmModal .confirmation-content i {
+    color: var(--primary-color);
+}
+
+#cancelModal .confirmation-content i {
+    color: #f44336;
+}
+
+.confirmation-content h2 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.8rem;
+}
+
+.confirmation-content p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+}
+
+.booking-info-modal {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #e0e0e0;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #555;
+    text-align: left;
+}
+
+.info-value {
+    font-weight: 700;
+    color: #333;
+    text-align: right;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+/* Стили для фильтров бронирований */
+.booking-filters {
+    background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    border: 2px solid #eee;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    border-color: var(--primary-color);
+    color: var(--dark-color);
+    font-weight: bold;
+    box-shadow: 0 3px 10px rgba(158, 240, 26, 0.3);
+}
+
+.filter-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.filter-count {
+    background: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 2px solid #eee;
+    font-weight: 600;
+}
+
+/* Стили для карточек бронирований */
+.bookings-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.booking-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    border-left: 5px solid transparent;
+}
+
+.booking-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-light);
+}
+
+.booking-card[data-status="confirmed"] {
+    border-left-color: #4caf50;
+}
+
+.booking-card[data-status="pending"] {
+    border-left-color: #ff9800;
+}
+
+.booking-card[data-status="cancelled"] {
+    border-left-color: #f44336;
+    opacity: 0.8;
+}
+
+.booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f5f5f5;
+}
+
+.booking-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #333;
+    flex: 1;
+}
+
+.booking-status {
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pending {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    color: #ff9800;
+    border: 2px solid #ffecb3;
+}
+
+.status-confirmed {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    color: #4caf50;
+    border: 2px solid #c8e6c9;
+}
+
+.status-cancelled {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    color: #f44336;
+    border: 2px solid #ffcdd2;
+}
+
+.booking-details {
+    margin-bottom: 20px;
+}
+
+.booking-detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
+}
+
+.booking-detail i {
+    width: 20px;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.booking-detail span {
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.confirmation-time {
+    font-size: 0.95rem;
+}
+
+.confirm-available {
+    color: #4caf50;
+    font-weight: 600;
+    background: rgba(76, 175, 80, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 2px solid rgba(76, 175, 80, 0.3);
+}
+
+.confirm-wait {
+    color: #ff9800;
+    font-weight: 500;
+    background: rgba(255, 152, 0, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 152, 0, 0.3);
+}
+
+.booking-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+/* "Нет бронирований" */
+.no-bookings {
+    text-align: center;
+    padding: 60px 30px;
+    background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+    border-radius: 15px;
+    border: 3px dashed #ddd;
+    margin: 20px 0;
+    grid-column: 1 / -1;
+}
+
+.no-bookings i {
+    font-size: 4rem;
+    color: #ccc;
+    margin-bottom: 25px;
+}
+
+.no-bookings h2 {
+    margin-bottom: 15px;
+    color: #555;
+    font-size: 1.8rem;
+}
+
+.no-bookings p {
+    margin-bottom: 25px;
+    color: #777;
+    font-size: 1.1rem;
+}
+
+.no-bookings .btn-primary {
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: var(--dark-color);
+    text-decoration: none;
+    border-radius: 10px;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+}
+
+.no-bookings .btn-primary:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(158, 240, 26, 0.3);
+}
+
+/* Адаптивность для бронирований */
+@media (max-width: 768px) {
+    .bookings-list {
+        grid-template-columns: 1fr;
+    }
+
+    .booking-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .filter-buttons {
+        justify-content: center;
+    }
+
+    .filter-info {
+        text-align: center;
+    }
+
+    .booking-card {
+        padding: 20px;
+    }
+
+    .booking-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .booking-actions {
+        flex-direction: column;
+    }
+
+    .btn-success, .btn-danger {
+        width: 100%;
+    }
+
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .notification {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+    }
+}
+
+@media (max-width: 480px) {
+    .booking-card {
+        padding: 15px;
+    }
+
+    .booking-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .booking-detail {
+        font-size: 0.9rem;
+    }
+
+    .confirmation-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .confirmation-content i {
+        font-size: 3rem;
+    }
+}
+
+
+
