@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile, PlayerRating
+from .models import UserProfile
 
 
 class UserProfileInline(admin.StackedInline):
@@ -31,24 +31,3 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'phone_verified', 'created_at')
     list_filter = ('phone_verified', 'created_at')
     search_fields = ('user__username', 'phone')
-
-# В admin.py добавим:
-
-@admin.register(PlayerRating)
-class PlayerRatingAdmin(admin.ModelAdmin):
-    list_display = ('user', 'numeric_rating', 'level', 'updated_at', 'updated_by')
-    list_filter = ('level', 'updated_at')
-    search_fields = ('user__username', 'user__email')
-    readonly_fields = ('level', 'updated_at')
-    fieldsets = (
-        ('Основная информация', {
-            'fields': ('user', 'numeric_rating', 'level')
-        }),
-        ('Дополнительно', {
-            'fields': ('updated_by', 'updated_at', 'coach_comment')
-        }),
-        ('История', {
-            'fields': ('rating_history',),
-            'classes': ('collapse',)
-        })
-    )

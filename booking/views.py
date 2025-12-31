@@ -389,6 +389,34 @@ def create_booking(request):
                 <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 8px;">
                     🎉 Бронирование успешно создано!
                 </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 15px; align-items: center;">
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-court-sport"></i> Корт:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{court.name}</div>
+
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-calendar"></i> Дата:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{booking_date.strftime("%d.%m.%Y")}</div>
+
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-clock"></i> Время:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{start_time_str} - {end_time.strftime("%H:%M")}</div>
+
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-hourglass"></i> Продолжительность:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{duration_text}</div>
+
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-tag"></i> Стоимость:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{int(booking.total_price)} руб.</div>
+                    </div>
+                </div>
                 <div style="margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.8);">
                     <i class="fas fa-info-circle"></i> Вы можете подтвердить бронирование за 24 часа до начала
                 </div>
@@ -398,8 +426,8 @@ def create_booking(request):
 
         messages.success(request, success_html)
 
-        # 11. Редирект на профиль с хешем #bookings вместо параметра ?tab=bookings
-        return redirect(f"{reverse('profile')}#bookings")
+        # 11. Редирект на профиль
+        return redirect(f"{reverse('profile')}?tab=bookings")
 
     except Exception as e:
         # Логируем ошибку

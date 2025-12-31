@@ -11,6 +11,7 @@
 
 <!-- ГОРИЗОНТАЛЬНЫЙ КАЛЕНДАРЬ -->
 <div class="calendar-container">
+    <!-- Блок с месяцем -->
     <div class="month-header" style="
         text-align: center;
         margin-bottom: 15px;
@@ -26,6 +27,7 @@
         Декабрь
     </div>
 
+    <!-- Контейнер для навигации (стрелки слева и справа) -->
     <div class="week-controls" style="
         display: flex;
         align-items: center;
@@ -34,10 +36,12 @@
         margin-bottom: 10px;
         width: 100%;
     ">
+        <!-- Кнопка "Предыдущая неделя" -->
         <button id="prev-week" class="week-arrow" type="button" title="Предыдущая неделя">
             <i class="fas fa-chevron-left"></i>
         </button>
 
+        <!-- Контейнер для дней недели -->
         <div class="week-nav" id="week-nav" style="
             display: flex;
             align-items: center;
@@ -52,124 +56,59 @@
             <!-- JavaScript заполнит дни здесь -->
         </div>
 
+        <!-- Кнопка "Следующая неделя" -->
         <button id="next-week" class="week-arrow" type="button" title="Следующая неделя">
             <i class="fas fa-chevron-right"></i>
         </button>
     </div>
 </div>
 
-<!-- ГОРИЗОНТАЛЬНЫЙ ВЫБОР КОРТОВ -->
-<div class="courts-horizontal-container">
-    <div class="section-card">
-        <h3><i class="fas fa-court-sport"></i> Выберите корт</h3>
-
-        <div id="courts-horizontal-list" class="courts-horizontal-list">
-            {% for court in courts %}
-            <div class="court-horizontal-item {% if forloop.first %}active{% endif %}"
-                 data-court-id="{{ court.id }}"
-                 data-court-price="{{ court.price_per_hour }}"
-                 onclick="selectCourt(this, {{ court.id }}, {{ court.price_per_hour }})"
-                 style="cursor: pointer;">
-
-                <div class="court-horizontal-image">
-                    <i class="fas fa-tennis-ball"></i>
-                </div>
-                <div class="court-horizontal-info">
-                    <h4>{{ court.name }}</h4>
-                    <span class="court-price">{{ court.price_per_hour }} ₽/час</span>
-                    <p class="court-description">{{ court.description|truncatechars:60 }}</p>
-                    <div class="court-status">
-                        {% if court.is_available %}
-                        <span class="status-available"><i class="fas fa-check-circle"></i> Доступен</span>
-                        {% else %}
-                        <span class="status-unavailable"><i class="fas fa-times-circle"></i> Недоступен</span>
-                        {% endif %}
+<!-- Основной контент страницы -->
+<div class="booking-content">
+    <div class="booking-sections">
+        <!-- Левая колонка: Выбор корта -->
+        <div class="section-left">
+            <div class="section-card">
+                <h3><i class="fas fa-court-sport"></i> Выберите корт</h3>
+                <div id="courts-list" class="courts-list">
+                    {% for court in courts %}
+                    <div class="court-item" data-court-id="{{ court.id }}" data-court-price="{{ court.price_per_hour }}">
+                        <div class="court-info">
+                            <h4>{{ court.name }}</h4>
+                            <span class="court-price">{{ court.price_per_hour }} ₽/час</span>
+                        </div>
+                        <div class="court-description">
+                            <p>{{ court.description }}</p>
+                        </div>
+                        <div class="court-status">
+                            {% if court.is_available %}
+                            <span class="status-available"><i class="fas fa-check-circle"></i> Доступен</span>
+                            {% else %}
+                            <span class="status-unavailable"><i class="fas fa-times-circle"></i> Недоступен</span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="no-courts">
-                <i class="fas fa-tennis-ball"></i>
-                <p>Нет доступных кортов в данный момент</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- ВРЕМЕННЫЕ СЛОТЫ С РАЗДЕЛАМИ -->
-<div class="time-slots-container">
-    <div class="section-card">
-        <h3><i class="fas fa-clock"></i> Доступное время</h3>
-
-        <div id="time-slots-sections" class="time-slots-sections">
-            <!-- УТРО -->
-            <div class="time-section morning-section">
-                <div class="section-header" data-section="morning">
-                    <h4><i class="fas fa-sun"></i> Утро (8:00 - 12:00)</h4>
-                    <span class="toggle-arrow"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="section-content" id="morning-slots" style="display: block;">
-                    <div class="select-court-date">
-                        <i class="fas fa-calendar-check"></i>
-                        <p>Выберите дату и корт, чтобы увидеть доступное время</p>
+                    {% empty %}
+                    <div class="no-courts">
+                        <i class="fas fa-tennis-ball"></i>
+                        <p>Нет доступных кортов в данный момент</p>
                     </div>
-                </div>
-            </div>
-
-            <!-- ДЕНЬ -->
-            <div class="time-section day-section">
-                <div class="section-header" data-section="day">
-                    <h4><i class="fas fa-cloud-sun"></i> День (12:00 - 17:00)</h4>
-                    <span class="toggle-arrow"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="section-content" id="day-slots" style="display: block;">
-                    <div class="select-court-date">
-                        <i class="fas fa-calendar-check"></i>
-                        <p>Выберите дату и корт, чтобы увидеть доступное время</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ВЕЧЕР -->
-            <div class="time-section evening-section">
-                <div class="section-header" data-section="evening">
-                    <h4><i class="fas fa-moon"></i> Вечер (17:00 - 22:00)</h4>
-                    <span class="toggle-arrow"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="section-content" id="evening-slots" style="display: block;">
-                    <div class="select-court-date">
-                        <i class="fas fa-calendar-check"></i>
-                        <p>Выберите дату и корт, чтобы увидеть доступное время</p>
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- СТАТИСТИКА ВЫБРАННОГО ВРЕМЕНИ -->
-<div id="selected-time-info" class="selected-time-info" style="display: none;">
-    <div class="section-card">
-        <h3><i class="fas fa-check-circle"></i> Выбранное время</h3>
-        <div class="selected-details">
-            <div class="selected-item">
-                <span class="label">Корт:</span>
-                <span id="selected-court" class="value"></span>
+        <!-- Правая колонка: Доступное время -->
+        <div class="section-right">
+            <div class="section-card">
+                <h3><i class="fas fa-clock"></i> Доступное время</h3>
+                <div id="time-slots" class="time-slots">
+                    <div class="select-court-date">
+                        <i class="fas fa-calendar-check"></i>
+                        <p>Выберите дату и корт, чтобы увидеть доступное время</p>
+                    </div>
+                </div>
             </div>
-            <div class="selected-item">
-                <span class="label">Дата:</span>
-                <span id="selected-date" class="value"></span>
-            </div>
-            <div class="selected-item">
-                <span class="label">Время:</span>
-                <span id="selected-time" class="value"></span>
-            </div>
-            <div class="selected-item">
-                <span class="label">Стоимость:</span>
-                <span id="selected-price" class="value"></span>
-            </div>
-            <button id="confirm-booking-btn" class="btn-primary">Забронировать</button>
         </div>
     </div>
 </div>
@@ -220,212 +159,286 @@
         margin-bottom: 30px;
     }
 
-    /* ГОРИЗОНТАЛЬНЫЙ ВЫБОР КОРТОВ */
-    .courts-horizontal-container {
-        margin-bottom: 30px;
-    }
-
-    .courts-horizontal-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
-
-    .court-horizontal-item {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 3px solid #eee;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .month-header {
         text-align: center;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        margin-bottom: 15px;
+        font-weight: 700;
+        color: #333;
+        font-size: 24px;
+        padding: 10px 0;
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%);
+        border-radius: 10px;
+        border: 2px solid rgba(158, 240, 26, 0.2);
+        width: 100%;
     }
 
-    .court-horizontal-item:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(158, 240, 26, 0.15);
-        border-color: #bff167;
-    }
-
-    .court-horizontal-item.active {
-        border-color: #9ef01a;
-        background: linear-gradient(135deg, rgba(158, 240, 26, 0.05) 0%, rgba(191, 241, 103, 0.05) 100%);
-        box-shadow: 0 15px 35px rgba(158, 240, 26, 0.2);
-    }
-
-    .court-horizontal-image {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
+    .week-controls {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 20px;
+        gap: 10px;
+        margin-bottom: 10px;
+        width: 100%;
     }
 
-    .court-horizontal-image i {
-        font-size: 40px;
+    .week-arrow {
+        width: 50px;
+        height: 90px;
+        border-radius: 8px;
+        border: 2px solid #bff167;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: #38b000;
+        font-size: 1.4rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+    }
+
+    .week-arrow:hover:not(:disabled) {
+        background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
+        border-color: #9ef01a;
         color: white;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(158, 240, 26, 0.3);
     }
 
-    .court-horizontal-info h4 {
-        margin: 0 0 10px 0;
+    .week-arrow:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: #f0f0f0;
+        border-color: #d0d0d0;
+        color: #888;
+    }
+
+    .week-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 5px;
+        flex: 1;
+        max-width: 800px;
+        padding: 0;
+        height: 90px;
+        margin: 0 10px;
+    }
+
+    .week-day {
+        cursor: pointer;
+        height: 90px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 60px;
+        max-width: 70px;
+        padding: 12px 5px;
+        border-radius: 10px;
+        background: #fafafa;
+        border: 2px solid transparent;
+        transition: all 0.3s;
+        margin: 0 1px;
+    }
+
+    .week-day:hover:not(.selected) {
+        background: rgba(158, 240, 26, 0.15);
+        transform: translateY(-3px);
+        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+        border-color: #bff167;
+    }
+
+    .week-day.selected {
+        background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
+        border-color: #9ef01a;
+        box-shadow: 0 5px 15px rgba(158, 240, 26, 0.3);
+    }
+
+    .weekday {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+
+    .week-day.selected .weekday {
+        color: white;
+        font-weight: 800;
+    }
+
+    .daynum {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 800;
         color: #333;
-        font-size: 20px;
+        background: white;
+        border: 2px solid transparent;
+        font-size: 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .week-day.selected .daynum {
+        border-color: white;
+        color: white;
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .week-day.today .daynum {
+        border-color: #9ef01a;
+        color: #7cc00f;
+    }
+
+    .week-day.today .weekday {
+        color: #7cc00f;
+    }
+
+    /* Стили для кортов */
+    .courts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .court-item {
+        padding: 20px;
+        border-radius: 12px;
+        background: white;
+        border: 2px solid #eaeaea;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .court-item:hover {
+        transform: translateY(-5px);
+        border-color: #bff167;
+        box-shadow: 0 8px 20px rgba(158, 240, 26, 0.15);
+    }
+
+    .court-item.active {
+        border-color: #9ef01a;
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.05) 0%, rgba(191, 241, 103, 0.05) 100%);
+        box-shadow: 0 8px 25px rgba(158, 240, 26, 0.2);
+    }
+
+    .court-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .court-info h4 {
+        margin: 0;
+        color: #333;
+        font-size: 18px;
         font-weight: 700;
     }
 
     .court-price {
-        display: inline-block;
         background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
         color: white;
-        padding: 8px 16px;
+        padding: 6px 12px;
         border-radius: 20px;
         font-weight: 700;
-        font-size: 16px;
-        margin-bottom: 15px;
+        font-size: 14px;
         box-shadow: 0 3px 8px rgba(158, 240, 26, 0.3);
     }
 
-    .court-description {
+    .court-description p {
+        margin: 0;
         color: #666;
         font-size: 14px;
         line-height: 1.5;
-        margin-bottom: 15px;
-        min-height: 40px;
     }
 
     .court-status {
-        font-size: 14px;
-        font-weight: 600;
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
     }
 
     .status-available {
         color: #38b000;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .status-available i {
+        margin-right: 5px;
     }
 
     .status-unavailable {
         color: #dc3545;
+        font-weight: 600;
+        font-size: 13px;
     }
 
-    /* ВРЕМЕННЫЕ СЛОТЫ С РАЗДЕЛАМИ */
-    .time-slots-container {
-        margin-bottom: 30px;
+    .status-unavailable i {
+        margin-right: 5px;
     }
 
-    .time-slots-sections {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .time-section {
-        background: white;
-        border-radius: 15px;
-        overflow: hidden;
-        border: 2px solid #f0f0f0;
-        transition: all 0.3s ease;
-    }
-
-    .time-section.morning-section .section-header {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
-    }
-
-    .time-section.day-section .section-header {
-        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-    }
-
-    .time-section.evening-section .section-header {
-        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-    }
-
-    .section-header {
-        padding: 20px 25px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: white;
-        user-select: none;
-    }
-
-    .section-header h4 {
-        margin: 0;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .section-header h4 i {
-        font-size: 20px;
-    }
-
-    .toggle-arrow {
-        transition: transform 0.3s ease;
-    }
-
-    .section-content {
-        padding: 25px;
-        animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* СЕТКА ВРЕМЕННЫХ СЛОТОВ */
-    .time-slots-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
-    }
-
-    .time-slot-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 3px solid #eee;
+    .no-courts {
         text-align: center;
-        position: relative;
+        padding: 40px 20px;
+        color: #888;
     }
 
-    .time-slot-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    .no-courts i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        color: #ccc;
     }
 
-    .time-slot-card.available {
+    .no-courts p {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    /* Стили для временных слотов */
+    .time-slots {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+
+    .time-slot {
+        padding: 15px;
+        border-radius: 10px;
+        background: white;
+        border: 2px solid #eaeaea;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    .time-slot.available {
         border-color: #bff167;
     }
 
-    .time-slot-card.available:hover {
+    .time-slot.available:hover {
         background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
         border-color: #9ef01a;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(158, 240, 26, 0.3);
     }
 
-    .time-slot-card.available:hover .slot-time,
-    .time-slot-card.available:hover .slot-price {
+    .time-slot.available:hover .slot-time,
+    .time-slot.available:hover .slot-status {
         color: white;
     }
 
-    .time-slot-card.unavailable {
-        opacity: 0.5;
+    .time-slot.unavailable {
+        opacity: 0.6;
         cursor: not-allowed;
         background: #f8f8f8;
     }
@@ -434,92 +447,26 @@
         display: block;
         font-weight: 700;
         color: #333;
-        font-size: 18px;
-        margin-bottom: 8px;
-    }
-
-    .slot-price {
-        display: block;
         font-size: 16px;
-        color: #38b000;
-        font-weight: 600;
         margin-bottom: 5px;
     }
 
     .slot-status {
+        display: block;
         font-size: 12px;
         color: #666;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
-    .time-slot-card.available .slot-status {
+    .time-slot.available .slot-status {
         color: #38b000;
     }
 
-    .time-slot-card.unavailable .slot-status {
+    .time-slot.unavailable .slot-status {
         color: #dc3545;
     }
 
-    /* СТАТИСТИКА ВЫБРАННОГО ВРЕМЕНИ */
-    .selected-time-info {
-        margin-top: 30px;
-        animation: slideUp 0.5s ease;
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .selected-details {
-        background: linear-gradient(135deg, #f8fff8 0%, #f0fff0 100%);
-        border-radius: 12px;
-        padding: 25px;
-        border: 2px solid #bff167;
-    }
-
-    .selected-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .selected-item:last-child {
-        border-bottom: none;
-        padding-top: 20px;
-        margin-top: 10px;
-    }
-
-    .selected-item .label {
-        font-weight: 600;
-        color: #555;
-        font-size: 16px;
-    }
-
-    .selected-item .value {
-        font-weight: 700;
-        color: #333;
-        font-size: 18px;
-    }
-
-    #confirm-booking-btn {
-        width: 100%;
-        margin-top: 10px;
-        padding: 15px;
-        font-size: 18px;
-        font-weight: 700;
-    }
-
-    /* СООБЩЕНИЯ */
     .select-court-date {
         text-align: center;
         padding: 40px 20px;
@@ -560,154 +507,57 @@
         margin-right: 10px;
     }
 
-    /* АДАПТИВНОСТЬ */
-    @media (max-width: 1200px) {
-        .courts-horizontal-list {
-            grid-template-columns: repeat(2, 1fr);
+    /* Добавьте эти анимации */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-50px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
         }
     }
 
-    @media (max-width: 768px) {
-        .courts-horizontal-list {
-            grid-template-columns: 1fr;
-        }
-
-        .time-slots-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .section-header {
-            padding: 15px 20px;
-        }
-
-        .section-header h4 {
-            font-size: 16px;
-        }
-
-        .time-slot-card {
-            padding: 15px;
-        }
-
-        .slot-time {
-            font-size: 16px;
-        }
+    /* Добавьте hover эффекты для кнопок в модальном окне */
+    .btn-secondary:hover {
+        background: #5a6268 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3) !important;
     }
 
-    @media (max-width: 480px) {
-        .time-slots-grid {
-            grid-template-columns: 1fr;
-        }
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #8edc19 0%, #a9d94c 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 15px rgba(158, 240, 26, 0.3) !important;
+    }
 
-        .court-horizontal-item {
-            padding: 20px;
-        }
-
-        .selected-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-
-        .selected-item .value {
-            font-size: 16px;
-        }
+    .close-modal:hover {
+        color: #333 !important;
     }
 </style>
-
-<script>
-// Простая функция для быстрой проверки кликабельности
-function selectCourt(element, courtId, courtPrice) {
-    console.log('Корт кликнут!', courtId, courtPrice);
-
-    // Убираем активный класс у всех кортов
-    document.querySelectorAll('.court-horizontal-item').forEach(item => {
-        item.classList.remove('active');
-        item.style.borderColor = '#eee';
-        item.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.08)';
-    });
-
-    // Добавляем активный класс выбранному
-    element.classList.add('active');
-    element.style.borderColor = '#9ef01a';
-    element.style.boxShadow = '0 15px 35px rgba(158, 240, 26, 0.2)';
-
-    // Обновляем выбранный корт в глобальных переменных
-    if (window.selectedCourtData) {
-        window.selectedCourtData = {
-            id: courtId,
-            price: courtPrice,
-            name: element.querySelector('h4').textContent
-        };
-    }
-
-    // Загружаем слоты для выбранного корта
-    if (window.selectedDate && window.loadTimeSlots) {
-        const dateStr = window.formatDate ? window.formatDate(window.selectedDate) : new Date().toISOString().split('T')[0];
-        window.loadTimeSlots(courtId, dateStr);
-    }
-}
-</script>
-
-<!-- ПРОСТОЙ И НАДЕЖНЫЙ СКРИПТ ДЛЯ СЕКЦИЙ -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎯 Section handler loaded');
-
-    // Функция для обработки кликов на заголовках
-    function setupSectionHandlers() {
-        const sections = ['morning', 'day', 'evening'];
-
-        sections.forEach(section => {
-            const header = document.querySelector(`[data-section="${section}"]`);
-            const content = document.getElementById(`${section}-slots`);
-
-            if (!header || !content) {
-                console.log(`❌ Section ${section} not found`);
-                return;
-            }
-
-            // Удаляем все старые обработчики
-            const newHeader = header.cloneNode(true);
-            header.parentNode.replaceChild(newHeader, header);
-
-            const newContent = content.cloneNode(true);
-            content.parentNode.replaceChild(newContent, content);
-
-            // Получаем обновленные элементы
-            const currentHeader = document.querySelector(`[data-section="${section}"]`);
-            const currentContent = document.getElementById(`${section}-slots`);
-
-            // Обработчик клика
-            currentHeader.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log(`🎯 Clicked ${section} section`);
-
-                if (currentContent.style.display === 'none') {
-                    currentContent.style.display = 'block';
-                    const arrow = this.querySelector('.toggle-arrow i');
-                    if (arrow) arrow.className = 'fas fa-chevron-down';
-                    console.log(`✅ ${section} opened`);
-                } else {
-                    currentContent.style.display = 'none';
-                    const arrow = this.querySelector('.toggle-arrow i');
-                    if (arrow) arrow.className = 'fas fa-chevron-right';
-                    console.log(`✅ ${section} closed`);
-                }
-            });
-
-            currentHeader.style.cursor = 'pointer';
-        });
-
-        console.log('✅ All sections initialized');
-    }
-
-    // Запускаем после загрузки страницы
-    setTimeout(setupSectionHandlers, 100);
-});
-</script>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/booking.js' %}"></script>
+<script>
+    console.log('Booking page extra JS loaded');
+
+    // Простая проверка что страница загружена
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Booking page DOM ready');
+        console.log('User authenticated:', {% if user.is_authenticated %}true{% else %}false{% endif %});
+        console.log('Courts count:', {{ courts.count }});
+    });
+</script>
+<script src="{% static 'js/booking.js' %}" charset="UTF-8"></script>
 {% endblock %}
