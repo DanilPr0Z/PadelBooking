@@ -13,6 +13,7 @@ import os
 from PIL import Image
 import io
 from django.conf import settings
+from django.utils import timezone
 
 
 class UserProfileManager(models.Manager):
@@ -279,6 +280,20 @@ class UserProfile(models.Model):
                 return False
         return False
 
+    def get_rating(self):
+        """Получить или создать рейтинг для пользователя"""
+        from .models import PlayerRating
+
+        if not hasattr(self.user, 'rating'):
+            # Создаем рейтинг по умолчанию
+            rating = PlayerRating.objects.create(
+                user=self.user,
+                numeric_rating=1.00,
+                level='D'
+            )
+            return rating
+        return self.user.rating
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -309,3 +324,218 @@ def create_user_profile(sender, instance, created, **kwargs):
             # Если ошибка, логируем но не падаем
             import sys
             print(f"Ошибка создания профиля для {instance.username}: {e}", file=sys.stderr)
+
+
+class PlayerRating(models.Model):
+    """Модель рейтинга игрока в падл-теннисе"""
+
+    # Буквенные уровни с описанием
+    RATING_LEVELS = [
+        ('D', 'Уровень 1 (D): Новичок'),
+        ('D+', 'Уровень 1+ (D+): Начинающий'),
+        ('C-', 'Уровень 2 (C-): Начинающий / Слабый средний'),
+        ('C', 'Уровень 2+ (C): Средний'),
+        ('C+', 'Уровень 3 (C+): Средний / Крепкий любитель'),
+        ('B-', 'Уровень 3+ (B-): Крепкий любитель'),
+        ('B', 'Уровень 4 (B): Продвинутый'),
+        ('B+', 'Уровень 4+ (B+): Топ-любитель'),
+        ('A', 'Уровень 5/5+ (A): Кандидат/Мастер спорта'),
+        ('PRO', 'Уровень 6-7 (Pro): Профессионал'),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='rating',
+        verbose_name='Игрок'
+    )
+
+    # Цифровой рейтинг (например: 2.75, 4.20 и т.д.)
+    numeric_rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=1.00,
+        verbose_name='Числовой рейтинг',
+        help_text='Значение от 1.00 до 7.00'
+    )
+
+    # Буквенный уровень (автоматически вычисляется из числового)
+    level = models.CharField(
+        max_length=10,
+        choices=RATING_LEVELS,
+        default='D',
+        verbose_name='Уровень',
+        editable=False  # Нельзя менять напрямую, только через numeric_rating
+    )
+
+    # Кто и когда изменил рейтинг
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ratings_updated',
+        verbose_name='Кем обновлен'
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+
+    # Комментарий тренера
+    coach_comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий тренера'
+    )
+
+    # История изменений рейтинга (JSON поле для хранения изменений)
+    rating_history = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='История рейтинга'
+    )
+
+    class Meta:
+        verbose_name = 'Рейтинг игрока'
+        verbose_name_plural = 'Рейтинги игроков'
+        ordering = ['-numeric_rating']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.level} ({self.numeric_rating})"
+
+    def calculate_level(self, rating_value=None):
+        """Определяет буквенный уровень на основе числового рейтинга"""
+        if rating_value is None:
+            rating_value = float(self.numeric_rating)
+
+        if 1.00 <= rating_value <= 1.50:
+            return 'D'
+        elif 1.60 <= rating_value <= 2.50:
+            return 'D+'
+        elif 2.60 <= rating_value <= 3.00:
+            return 'C-'
+        elif 3.10 <= rating_value <= 3.50:
+            return 'C'
+        elif 3.60 <= rating_value <= 4.00:
+            return 'C+'
+        elif 4.10 <= rating_value <= 4.50:
+            return 'B-'
+        elif 4.60 <= rating_value <= 5.00:
+            return 'B'
+        elif 5.10 <= rating_value <= 5.50:
+            return 'B+'
+        elif 5.60 <= rating_value <= 6.50:
+            return 'A'
+        elif 6.60 <= rating_value <= 7.00:
+            return 'PRO'
+        else:
+            return 'D'  # По умолчанию
+
+    def get_level_display_full(self):
+        """Полное описание уровня"""
+        for code, name in self.RATING_LEVELS:
+            if code == self.level:
+                return name
+        return self.get_level_display()
+
+    def save(self, *args, **kwargs):
+        """Автоматически вычисляем уровень при сохранении"""
+        # Преобразуем в float для сравнений
+        rating_float = float(self.numeric_rating)
+
+        # Ограничиваем значения
+        if rating_float < 1.00:
+            self.numeric_rating = 1.00
+        elif rating_float > 7.00:
+            self.numeric_rating = 7.00
+
+        # Вычисляем уровень
+        self.level = self.calculate_level(float(self.numeric_rating))
+
+        super().save(*args, **kwargs)
+
+    def add_to_history(self, old_rating, new_rating, updated_by, comment=''):
+        """Добавляет запись в историю изменений"""
+        history_entry = {
+            'date': timezone.now().isoformat(),
+            'old_rating': float(old_rating),
+            'new_rating': float(new_rating),
+            'old_level': self.calculate_level(float(old_rating)),
+            'new_level': self.calculate_level(float(new_rating)),
+            'updated_by': updated_by.username if updated_by else 'system',
+            'updated_by_id': updated_by.id if updated_by else None,
+            'comment': comment
+        }
+
+        self.rating_history.append(history_entry)
+
+        # Ограничиваем историю последними 50 изменениями
+        if len(self.rating_history) > 50:
+            self.rating_history = self.rating_history[-50:]
+
+        self.save()
+
+    def get_progress_percentage(self):
+        """Процент прогресса внутри текущего уровня"""
+        rating = float(self.numeric_rating)
+
+        # Диапазоны для каждого уровня
+        ranges = {
+            'D': (1.00, 1.50),
+            'D+': (1.60, 2.50),
+            'C-': (2.60, 3.00),
+            'C': (3.10, 3.50),
+            'C+': (3.60, 4.00),
+            'B-': (4.10, 4.50),
+            'B': (4.60, 5.00),
+            'B+': (5.10, 5.50),
+            'A': (5.60, 6.50),
+            'PRO': (6.60, 7.00)
+        }
+
+        if self.level in ranges:
+            min_val, max_val = ranges[self.level]
+
+            # Рассчитываем прогресс
+            if rating <= min_val:
+                return 0
+            elif rating >= max_val:
+                return 100
+
+            progress = ((rating - min_val) / (max_val - min_val)) * 100
+            return max(0, min(100, progress))  # Гарантируем границы 0-100%
+
+        return 0
+
+    def get_range_min(self):
+        """Возвращает минимальное значение для текущего уровня"""
+        ranges = {
+            'D': 1.00,
+            'D+': 1.60,
+            'C-': 2.60,
+            'C': 3.10,
+            'C+': 3.60,
+            'B-': 4.10,
+            'B': 4.60,
+            'B+': 5.10,
+            'A': 5.60,
+            'PRO': 6.60
+        }
+        return float(ranges.get(self.level, 1.00))
+
+    def get_range_max(self):
+        """Возвращает максимальное значение для текущего уровня"""
+        ranges = {
+            'D': 1.50,
+            'D+': 2.50,
+            'C-': 3.00,
+            'C': 3.50,
+            'C+': 4.00,
+            'B-': 4.50,
+            'B': 5.00,
+            'B+': 5.50,
+            'A': 6.50,
+            'PRO': 7.00
+        }
+        return float(ranges.get(self.level, 7.00))

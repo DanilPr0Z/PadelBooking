@@ -453,3 +453,43 @@ class ProfileUpdateForm(forms.ModelForm):
                     raise ValidationError(f'Этот номер телефона уже используется: {", ".join(users)}')
 
         return formatted_phone
+
+from django import forms
+from .models import PlayerRating
+
+
+class PlayerRatingForm(forms.ModelForm):
+    """Форма для изменения рейтинга игрока (доступна только тренерам)"""
+
+    class Meta:
+        model = PlayerRating
+        fields = ['numeric_rating', 'coach_comment']
+        widgets = {
+            'numeric_rating': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '1.00',
+                'max': '7.00',
+                'placeholder': 'Введите значение от 1.00 до 7.00'
+            }),
+            'coach_comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Комментарий тренера о навыках игрока'
+            })
+        }
+        labels = {
+            'numeric_rating': 'Числовой рейтинг',
+            'coach_comment': 'Комментарий тренера'
+        }
+        help_texts = {
+            'numeric_rating': 'Значение от 1.00 (новичок) до 7.00 (профессионал)',
+        }
+
+    def clean_numeric_rating(self):
+        numeric_rating = self.cleaned_data.get('numeric_rating')
+
+        if numeric_rating < 1.00 or numeric_rating > 7.00:
+            raise forms.ValidationError('Рейтинг должен быть в диапазоне от 1.00 до 7.00')
+
+        return round(float(numeric_rating), 2)

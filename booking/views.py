@@ -426,8 +426,8 @@ def create_booking(request):
 
         messages.success(request, success_html)
 
-        # 11. Редирект на профиль
-        return redirect(f"{reverse('profile')}?tab=bookings")
+        # 11. Редирект на профиль с хешем #bookings вместо параметра ?tab=bookings
+        return redirect(f"{reverse('profile')}#bookings")
 
     except Exception as e:
         # Логируем ошибку

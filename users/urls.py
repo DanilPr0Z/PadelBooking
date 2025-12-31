@@ -7,6 +7,9 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('logout/', views.user_logout, name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('rating/', views.rating_detail, name='rating_detail'),
+    path('ajax/rating-info/', views.get_rating_info, name='ajax_rating_info'),
+    path('ajax/update-rating/<int:user_id>/', views.update_player_rating, name='ajax_update_rating'),
 
     # AJAX endpoints
     path('ajax/logout/', views.ajax_logout, name='ajax_logout'),
