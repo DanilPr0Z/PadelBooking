@@ -1,0 +1,40 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Бронирование создано{% endblock %}
+
+{% block email_header %}Бронирование создано{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.username }}!</h2>
+<p>Ваше бронирование успешно создано.</p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Стоимость:</strong></span>
+        <span>{{ booking.total_price|floatformat:0 }} руб.</span>
+    </div>
+</div>
+
+<p>Пожалуйста, произведите оплату для подтверждения бронирования.</p>
+
+<a href="{{ site_url }}{% url 'payment' booking.id %}" class="button">Оплатить бронирование</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}
+
+
+
+

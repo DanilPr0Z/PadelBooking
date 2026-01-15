@@ -1,0 +1,53 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Ошибка оплаты{% endblock %}
+
+{% block email_header %}Ошибка оплаты{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p style="color: #dc3545;">К сожалению, при обработке вашего платежа произошла ошибка.</p>
+
+<div class="booking-details">
+    <h3>Информация о платеже:</h3>
+    <div class="detail-row">
+        <span><strong>Номер бронирования:</strong></span>
+        <span>#{{ booking.id }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата игры:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }}, {{ booking.start_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Сумма:</strong></span>
+        <span>{{ booking.total_price|floatformat:0 }} руб.</span>
+    </div>
+    {% if payment %}
+    <div class="detail-row">
+        <span><strong>Статус платежа:</strong></span>
+        <span style="color: #dc3545;">{{ payment.get_status_display }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<p><strong>Возможные причины ошибки:</strong></p>
+<ul>
+    <li>Недостаточно средств на карте</li>
+    <li>Карта заблокирована или просрочена</li>
+    <li>Превышен лимит по карте</li>
+    <li>Технические проблемы банка</li>
+    <li>Неверно введены данные карты</li>
+</ul>
+
+<p>Ваше бронирование сохранено. Пожалуйста, попробуйте оплатить еще раз.</p>
+
+<a href="{{ site_url }}{% url 'payment' booking.id %}" class="button">Повторить оплату</a>
+
+<p style="color: #6c757d; font-size: 14px;"><em>Если проблема повторяется, свяжитесь с нашей службой поддержки или попробуйте использовать другой способ оплаты.</em></p>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

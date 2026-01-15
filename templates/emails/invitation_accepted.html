@@ -1,0 +1,46 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Приглашение принято{% endblock %}
+
+{% block email_header %}Приглашение принято!{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p style="font-size: 18px; color: #38b000;"><strong>Отличные новости!</strong></p>
+
+<p><strong>{{ invitation.invitee.first_name }} {{ invitation.invitee.last_name }}</strong> принял(а) ваше приглашение и присоединился к бронированию!</p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ invitation.booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ invitation.booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ invitation.booking.start_time|time:"H:i" }} - {{ invitation.booking.end_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Всего участников:</strong></span>
+        <span>{{ invitation.booking.get_all_participants|length }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Стоимость на человека:</strong></span>
+        <span style="font-size: 18px; font-weight: bold; color: #38b000;">{{ invitation.booking.price_per_person|floatformat:0 }} руб.</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Свободных мест:</strong></span>
+        <span>{{ invitation.booking.available_slots }}</span>
+    </div>
+</div>
+
+<p>Теперь стоимость бронирования делится между всеми участниками!</p>
+
+<a href="{{ site_url }}{% url 'booking_detail' invitation.booking.id %}" class="button">Посмотреть бронирование</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

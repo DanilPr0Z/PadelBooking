@@ -1,0 +1,65 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Обновление рейтинга{% endblock %}
+
+{% block email_header %}Ваш рейтинг обновлен!{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p>Ваш игровой рейтинг был обновлен тренером.</p>
+
+<div class="booking-details">
+    <h3>Изменения рейтинга:</h3>
+    <div class="detail-row">
+        <span><strong>Предыдущий рейтинг:</strong></span>
+        <span>{{ old_rating.level }} ({{ old_rating.numeric_rating }})</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Новый рейтинг:</strong></span>
+        <span style="font-size: 20px; font-weight: bold; color: {% if new_rating.numeric_rating > old_rating.numeric_rating %}#38b000{% else %}#dc3545{% endif %};">
+            {{ new_rating.level }} ({{ new_rating.numeric_rating }})
+        </span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Изменение:</strong></span>
+        <span style="color: {% if new_rating.numeric_rating > old_rating.numeric_rating %}#38b000{% else %}#dc3545{% endif %};">
+            {% if new_rating.numeric_rating > old_rating.numeric_rating %}+{% endif %}{{ new_rating.numeric_rating|add:old_rating.numeric_rating|floatformat:2 }}
+        </span>
+    </div>
+    {% if rating.updated_by %}
+    <div class="detail-row">
+        <span><strong>Тренер:</strong></span>
+        <span>{{ rating.updated_by.first_name }} {{ rating.updated_by.last_name }}</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if rating.coach_comment %}
+<div class="booking-details">
+    <h3>Комментарий тренера:</h3>
+    <p style="font-style: italic; color: #6c757d;">{{ rating.coach_comment }}</p>
+</div>
+{% endif %}
+
+{% if new_rating.numeric_rating > old_rating.numeric_rating %}
+<p style="color: #38b000; font-size: 18px;">🎉 <strong>Поздравляем с повышением уровня!</strong></p>
+<p>Вы отлично прогрессируете! Продолжайте в том же духе.</p>
+{% elif new_rating.numeric_rating < old_rating.numeric_rating %}
+<p>Ваш рейтинг понижен. Не расстраивайтесь - это временно! Обсудите с тренером, над чем нужно поработать.</p>
+{% else %}
+<p>Ваш рейтинг остался на прежнем уровне, но тренер оставил комментарий.</p>
+{% endif %}
+
+<p>Уровни игроков:</p>
+<ul style="font-size: 14px; color: #6c757d;">
+    <li><strong>D, D+</strong> - Новичок, Начинающий (1.00-2.50)</li>
+    <li><strong>C-, C, C+</strong> - Средний уровень (2.60-4.00)</li>
+    <li><strong>B-, B, B+</strong> - Продвинутый (4.10-5.50)</li>
+    <li><strong>A</strong> - Кандидат/Мастер спорта (5.60-6.50)</li>
+    <li><strong>PRO</strong> - Профессионал (6.60-7.00)</li>
+</ul>
+
+<a href="{{ site_url }}{% url 'profile' %}" class="button">Посмотреть профиль</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

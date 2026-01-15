@@ -1,0 +1,26 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Код подтверждения email{% endblock %}
+
+{% block email_header %}Подтверждение email{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.username }}!</h2>
+<p>Для подтверждения вашего email адреса введите следующий код:</p>
+
+<div style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 8px; margin: 30px 0;">
+    <div style="font-size: 2.5rem; font-weight: bold; color: #38b000; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        {{ code }}
+    </div>
+</div>
+
+<p style="color: #6c757d; font-size: 0.9rem;">
+    Этот код действителен в течение 24 часов. Если вы не запрашивали этот код, просто проигнорируйте это сообщение.
+</p>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}
+
+
+
+

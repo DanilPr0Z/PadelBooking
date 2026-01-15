@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Оплата бронирования - Paddle Booking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<style>
+    .payment-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .payment-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--primary-color);
+    }
+    
+    .payment-header h1 {
+        color: var(--dark-color);
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    .payment-header .booking-info {
+        color: var(--gray-color);
+        font-size: 1rem;
+    }
+    
+    .booking-summary {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .booking-summary h3 {
+        margin-bottom: 20px;
+        color: var(--dark-color);
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .summary-row:last-child {
+        border-bottom: none;
+    }
+    
+    .summary-label {
+        color: var(--gray-color);
+        font-weight: 500;
+    }
+    
+    .summary-value {
+        color: var(--dark-color);
+        font-weight: 600;
+    }
+    
+    .total-row {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid var(--primary-color);
+        font-size: 1.2rem;
+    }
+    
+    .total-value {
+        color: var(--secondary-color);
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .payment-methods {
+        margin-bottom: 30px;
+    }
+    
+    .payment-methods h3 {
+        margin-bottom: 20px;
+        color: var(--dark-color);
+    }
+    
+    .payment-method-option {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .payment-method-option:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .payment-method-option input[type="radio"]:checked + label {
+        color: var(--primary-color);
+    }
+    
+    .payment-method-option input[type="radio"] {
+        margin-right: 15px;
+        transform: scale(1.2);
+    }
+    
+    .payment-method-label {
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+        color: var(--dark-color);
+        cursor: pointer;
+    }
+    
+    .payment-method-icon {
+        margin-right: 15px;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+    }
+    
+    .payment-method-description {
+        margin-top: 8px;
+        margin-left: 35px;
+        color: var(--gray-color);
+        font-size: 0.9rem;
+    }
+    
+    .payment-terms {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .payment-terms h4 {
+        margin-bottom: 10px;
+        color: var(--dark-color);
+    }
+    
+    .payment-terms ul {
+        margin-left: 20px;
+        color: var(--gray-color);
+    }
+    
+    .payment-terms li {
+        margin-bottom: 8px;
+    }
+    
+    .terms-checkbox {
+        margin-bottom: 30px;
+    }
+    
+    .terms-checkbox label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        color: var(--dark-color);
+    }
+    
+    .terms-checkbox input[type="checkbox"] {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+    
+    .payment-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+    }
+    
+    .btn-pay {
+        flex: 1;
+        max-width: 300px;
+        padding: 15px 30px;
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-pay:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-cancel {
+        padding: 15px 30px;
+        background: white;
+        color: var(--dark-color);
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .btn-cancel:hover {
+        border-color: var(--gray-color);
+        background: #f8f9fa;
+    }
+    
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .info-box i {
+        color: #2196F3;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="payment-header">
+        <h1><i class="fas fa-credit-card"></i> Оплата бронирования</h1>
+        <div class="booking-info">
+            Бронирование #{{ booking.id }} | {{ booking.date|date:"d.m.Y" }} в {{ booking.start_time|time:"H:i" }}
+        </div>
+    </div>
+    
+    <div class="booking-summary">
+        <h3><i class="fas fa-calendar-alt"></i> Детали бронирования</h3>
+        <div class="summary-row">
+            <span class="summary-label">Корт:</span>
+            <span class="summary-value">{{ booking.court.name }}</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Дата:</span>
+            <span class="summary-value">{{ booking.date|date:"d.m.Y" }}</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Время:</span>
+            <span class="summary-value">{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Продолжительность:</span>
+            <span class="summary-value">
+                {% with duration=booking.end_time|time:"H:i"|date:"H:i" start=booking.start_time|time:"H:i"|date:"H:i" %}
+                    {{ booking.total_price|floatformat:0|add:"0"|floatformat:0|div:booking.court.price_per_hour|floatformat:0 }} час(а)
+                {% endwith %}
+            </span>
+        </div>
+        <div class="summary-row total-row">
+            <span class="summary-label"><strong>К оплате:</strong></span>
+            <span class="summary-value total-value">{{ payment.amount|floatformat:0 }} руб.</span>
+        </div>
+    </div>
+    
+    {% if payment.status == 'paid' %}
+    <div class="info-box">
+        <i class="fas fa-check-circle"></i>
+        <strong>Бронирование уже оплачено!</strong> Дата оплаты: {{ payment.paid_at|date:"d.m.Y H:i" }}
+    </div>
+    <div class="payment-actions">
+        <a href="{% url 'profile' %}#bookings" class="btn-cancel">Вернуться к бронированиям</a>
+    </div>
+    {% else %}
+    <form method="POST" id="paymentForm">
+        {% csrf_token %}
+        
+        <div class="payment-methods">
+            <h3><i class="fas fa-wallet"></i> Выберите способ оплаты</h3>
+            {% for choice in payment_form.payment_method %}
+                <div class="payment-method-option">
+                    {{ choice.tag }}
+                    <label for="{{ choice.id_for_label }}" class="payment-method-label">
+                        {% if choice.choice_value == 'online' %}
+                            <i class="fas fa-credit-card payment-method-icon"></i>
+                            <span>Онлайн оплата (карта)</span>
+                        {% elif choice.choice_value == 'card' %}
+                            <i class="fas fa-university payment-method-icon"></i>
+                            <span>Банковская карта</span>
+                        {% elif choice.choice_value == 'bank_transfer' %}
+                            <i class="fas fa-exchange-alt payment-method-icon"></i>
+                            <span>Банковский перевод</span>
+                        {% elif choice.choice_value == 'cash' %}
+                            <i class="fas fa-money-bill-wave payment-method-icon"></i>
+                            <span>Наличные при посещении</span>
+                        {% endif %}
+                    </label>
+                    {% if choice.choice_value == 'online' %}
+                        <div class="payment-method-description">
+                            Оплата банковской картой онлайн. Безопасная оплата через платежную систему.
+                        </div>
+                    {% elif choice.choice_value == 'cash' %}
+                        <div class="payment-method-description">
+                            Оплата наличными при посещении клуба. Бронирование будет подтверждено после оплаты.
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {{ payment_form.payment_method.errors }}
+        </div>
+        
+        <div class="payment-terms">
+            <h4><i class="fas fa-info-circle"></i> Условия оплаты</h4>
+            <ul>
+                <li>Бронирование будет подтверждено после успешной оплаты</li>
+                <li>Возврат средств возможен при отмене бронирования не менее чем за 24 часа до начала</li>
+                <li>При отмене менее чем за 24 часа возврат не производится</li>
+            </ul>
+        </div>
+        
+        <div class="terms-checkbox">
+            {{ confirmation_form.agree_to_terms }}
+            <label for="{{ confirmation_form.agree_to_terms.id_for_label }}">
+                Я согласен с условиями оплаты и правилами бронирования
+            </label>
+            {{ confirmation_form.agree_to_terms.errors }}
+        </div>
+        
+        <div class="payment-actions">
+            <button type="submit" class="btn-pay">
+                <i class="fas fa-lock"></i> Перейти к оплате
+            </button>
+            <a href="{% url 'profile' %}#bookings" class="btn-cancel">Отмена</a>
+        </div>
+    </form>
+    
+    <div class="info-box" style="margin-top: 20px;">
+        <i class="fas fa-shield-alt"></i>
+        <strong>Безопасная оплата:</strong> Все платежи обрабатываются через защищенное соединение.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+

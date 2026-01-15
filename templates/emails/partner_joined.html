@@ -1,0 +1,67 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Новый партнёр присоединился{% endblock %}
+
+{% block email_header %}Новый партнёр!{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p style="font-size: 18px; color: #38b000;"><strong>У вас новый партнёр по игре!</strong></p>
+
+<p><strong>{{ partner.first_name }} {{ partner.last_name }}</strong> присоединился к вашему бронированию через функцию "Найти партнёра".</p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Всего участников:</strong></span>
+        <span>{{ booking.get_all_participants|length }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Стоимость на человека:</strong></span>
+        <span style="font-size: 18px; font-weight: bold; color: #38b000;">{{ booking.price_per_person|floatformat:0 }} руб.</span>
+    </div>
+    {% if not booking.is_full %}
+    <div class="detail-row">
+        <span><strong>Свободных мест:</strong></span>
+        <span>{{ booking.available_slots }}</span>
+    </div>
+    {% else %}
+    <div class="detail-row">
+        <span><strong>Статус:</strong></span>
+        <span style="color: #38b000; font-weight: bold;">Корт заполнен!</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if partner.rating %}
+<div class="booking-details">
+    <h3>Информация о партнёре:</h3>
+    <div class="detail-row">
+        <span><strong>Имя:</strong></span>
+        <span>{{ partner.first_name }} {{ partner.last_name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Рейтинг:</strong></span>
+        <span style="font-weight: bold; color: #38b000;">{{ partner.rating.level }} ({{ partner.rating.numeric_rating }})</span>
+    </div>
+</div>
+{% endif %}
+
+<p>Отличная новость - теперь стоимость делится между всеми участниками!</p>
+
+<a href="{{ site_url }}{% url 'booking_detail' booking.id %}" class="button">Посмотреть бронирование</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

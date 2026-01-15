@@ -4,16 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d1754e3-8f8c-4a4b-97dd-0341b3fd3117" name="Changes" comment="1.6">
-      <change afterPath="$PROJECT_DIR$/users/signals.py" afterDir="false" />
+    <list default="true" id="5d1754e3-8f8c-4a4b-97dd-0341b3fd3117" name="Changes" comment="1.7">
+      <change afterPath="$PROJECT_DIR$/static/css/booking.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/static/css/profile.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/static/js/navbar.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/static/js/profile.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/management/commands/create_coach_group.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/booking/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/booking/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/forms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/booking/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/booking/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/booking.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/booking.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/js/booking.js" beforeDir="false" afterPath="$PROJECT_DIR$/static/js/booking.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/js/notification.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/partials/navbar.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/partials/navbar.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/users/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/users/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,14 +74,26 @@
     &quot;Python.create_test_courts.executor&quot;: &quot;Run&quot;,
     &quot;Python.forms.executor&quot;: &quot;Run&quot;,
     &quot;Python.reset_database.executor&quot;: &quot;Run&quot;,
+    &quot;Python.setup_env.executor&quot;: &quot;Run&quot;,
     &quot;Python.shell.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/danil/PycharmProjects/PythonProject27/media&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+    &quot;last_opened_file_path&quot;: &quot;/Users/danil/PycharmProjects/PythonProject27&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -88,7 +107,7 @@
       <recent name="$PROJECT_DIR$/users" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.reset_database">
+  <component name="RunManager" selected="Python.clean_duplicates">
     <configuration name="clean_duplicates" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="paddle_booking" />
       <option name="ENV_FILES" value="" />
@@ -155,6 +174,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="setup_env" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="paddle_booking" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/setup_env.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="shell" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="paddle_booking" />
       <option name="ENV_FILES" value="" />
@@ -177,14 +218,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Python.reset_database" />
-        <item itemvalue="Python.clean_duplicates" />
-        <item itemvalue="Python.shell" />
-        <item itemvalue="Python.create_test_courts" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -200,6 +233,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1765460729409</updated>
+      <workItem from="1767329704053" duration="562000" />
+      <workItem from="1767619018480" duration="171000" />
     </task>
     <task id="LOCAL-00001" summary="1.0">
       <option name="closed" value="true" />
@@ -257,8 +292,30 @@
       <option name="project" value="LOCAL" />
       <updated>1766763470527</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="1.7">
+      <option name="closed" value="true" />
+      <created>1767190654591</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1767190654591</updated>
+    </task>
+    <task id="LOCAL-00009" summary="1.7">
+      <option name="closed" value="true" />
+      <created>1767190686996</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1767190686996</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.configurationType" implementationName="PythonConfigurationType" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -291,7 +348,8 @@
     <MESSAGE value="1.4" />
     <MESSAGE value="1.5" />
     <MESSAGE value="1.6" />
-    <option name="LAST_COMMIT_MESSAGE" value="1.6" />
+    <MESSAGE value="1.7" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.7" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

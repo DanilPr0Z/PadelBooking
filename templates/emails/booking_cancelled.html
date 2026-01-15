@@ -1,0 +1,36 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Бронирование отменено{% endblock %}
+
+{% block email_header %}Бронирование отменено{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.username }}!</h2>
+<p>Ваше бронирование было отменено.</p>
+
+<div class="booking-details">
+    <h3>Детали отмененного бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+    </div>
+</div>
+
+<p>Если у вас есть вопросы, пожалуйста, свяжитесь с нами.</p>
+
+<a href="{{ site_url }}{% url 'booking' %}" class="button">Забронировать снова</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}
+
+
+
+

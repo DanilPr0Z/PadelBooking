@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ошибка оплаты - Paddle Booking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<style>
+    .error-container {
+        max-width: 600px;
+        margin: 60px auto;
+        padding: 40px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .error-icon {
+        font-size: 5rem;
+        color: var(--danger-color);
+        margin-bottom: 20px;
+    }
+    
+    .error-title {
+        font-size: 2rem;
+        color: var(--dark-color);
+        margin-bottom: 20px;
+    }
+    
+    .error-message {
+        color: var(--gray-color);
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+    
+    .btn-primary {
+        padding: 15px 30px;
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+        padding: 15px 30px;
+        background: white;
+        color: var(--dark-color);
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-exclamation-circle"></i>
+    </div>
+    <h1 class="error-title">Ошибка оплаты</h1>
+    <p class="error-message">
+        К сожалению, не удалось обработать платеж. Пожалуйста, попробуйте еще раз или выберите другой способ оплаты.
+    </p>
+    
+    <div class="action-buttons">
+        <a href="{% url 'payment' booking.id %}" class="btn-primary">
+            <i class="fas fa-redo"></i> Попробовать снова
+        </a>
+        <a href="{% url 'profile' %}#bookings" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i> Вернуться
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+
+
+

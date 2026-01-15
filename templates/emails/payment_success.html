@@ -1,0 +1,46 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Оплата успешна{% endblock %}
+
+{% block email_header %}Оплата успешно завершена{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.username }}!</h2>
+<p>Ваш платеж успешно обработан. Бронирование подтверждено!</p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Оплачено:</strong></span>
+        <span>{{ payment.amount|floatformat:0 }} руб.</span>
+    </div>
+    {% if payment.transaction_id %}
+    <div class="detail-row">
+        <span><strong>Номер транзакции:</strong></span>
+        <span>{{ payment.transaction_id }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<p>Мы ждем вас на корте в указанное время!</p>
+
+<a href="{{ site_url }}{% url 'profile' %}#bookings" class="button">Мои бронирования</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}
+
+
+
+

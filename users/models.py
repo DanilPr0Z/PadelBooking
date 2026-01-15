@@ -91,7 +91,17 @@ class UserProfile(models.Model):
     )
 
     phone_verified = models.BooleanField(default=False, verbose_name='Телефон подтвержден')
-    verification_code = models.CharField(max_length=6, blank=True, null=True)
+    verification_code = models.CharField(max_length=6, blank=True, null=True, verbose_name='Код подтверждения телефона')
+
+    # Email verification fields
+    email_verified = models.BooleanField(default=False, verbose_name='Email подтвержден')
+    email_verification_code = models.CharField(max_length=6, blank=True, null=True, verbose_name='Код подтверждения email')
+    email_pending = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name='Email в ожидании подтверждения',
+        help_text='Новый email, ожидающий подтверждения'
+    )
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='Дата рождения')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата регистрации')
@@ -114,6 +124,9 @@ class UserProfile(models.Model):
         ]
 
     def __str__(self):
+        full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+        if full_name:
+            return f"{full_name} - {self.phone}"
         return f"{self.user.username} - {self.phone}"
 
     def clean(self):
@@ -402,7 +415,9 @@ class PlayerRating(models.Model):
         ordering = ['-numeric_rating']
 
     def __str__(self):
-        return f"{self.user.username}: {self.level} ({self.numeric_rating})"
+        full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+        display_name = full_name if full_name else self.user.username
+        return f"{display_name}: {self.level} ({self.numeric_rating})"
 
     def calculate_level(self, rating_value=None):
         """Определяет буквенный уровень на основе числового рейтинга"""
@@ -539,3 +554,263 @@ class PlayerRating(models.Model):
             'PRO': 7.00
         }
         return float(ranges.get(self.level, 7.00))
+
+
+class CoachProfile(models.Model):
+    """Профиль тренера"""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='coach_profile',
+        verbose_name='Тренер'
+    )
+    qualifications = models.TextField(
+        blank=True,
+        verbose_name='Квалификация и сертификаты'
+    )
+    specialization = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='Специализация',
+        help_text='Например: начинающие, продвинутые, дети, взрослые'
+    )
+    experience_years = models.IntegerField(
+        default=0,
+        verbose_name='Опыт работы (лет)'
+    )
+    hourly_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Часовая ставка'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активен'
+    )
+    bio = models.TextField(
+        blank=True,
+        verbose_name='О себе'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата регистрации как тренер'
+    )
+    coach_rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=5.0,
+        verbose_name='Рейтинг тренера'
+    )
+    contact_info = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Контактная информация'
+    )
+
+    class Meta:
+        verbose_name = 'Профиль тренера'
+        verbose_name_plural = 'Профили тренеров'
+
+    def __str__(self):
+        full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+        display_name = full_name if full_name else self.user.username
+        return f"Тренер: {display_name}"
+
+
+class TrainingSession(models.Model):
+    """Тренировочная сессия"""
+
+    STATUS_CHOICES = [
+        ('scheduled', 'Запланирована'),
+        ('in_progress', 'В процессе'),
+        ('completed', 'Завершена'),
+        ('cancelled', 'Отменена'),
+    ]
+
+    coach = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='coach_sessions',
+        verbose_name='Тренер'
+    )
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='training_sessions',
+        verbose_name='Игрок'
+    )
+    court = models.ForeignKey(
+        'booking.Court',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Корт'
+    )
+    date = models.DateField(verbose_name='Дата тренировки')
+    start_time = models.TimeField(verbose_name='Время начала')
+    end_time = models.TimeField(verbose_name='Время окончания')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='scheduled',
+        verbose_name='Статус'
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name='Заметки тренера'
+    )
+    player_feedback = models.TextField(
+        blank=True,
+        verbose_name='Отзыв игрока'
+    )
+    rating_given = models.BooleanField(
+        default=False,
+        verbose_name='Рейтинг обновлен'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Тренировочная сессия'
+        verbose_name_plural = 'Тренировочные сессии'
+        ordering = ['-date', '-start_time']
+
+    def __str__(self):
+        coach_name = f"{self.coach.first_name} {self.coach.last_name}".strip() or self.coach.username
+        player_name = f"{self.player.first_name} {self.player.last_name}".strip() or self.player.username
+        return f"Тренировка: {coach_name} - {player_name} ({self.date})"
+
+
+class Notification(models.Model):
+    """Уведомления пользователей"""
+
+    NOTIFICATION_TYPES = [
+        ('registration', 'Регистрация'),
+        ('phone_verification', 'Подтверждение телефона'),
+        ('booking_created', 'Бронирование создано'),
+        ('booking_confirmed', 'Бронирование подтверждено'),
+        ('booking_cancelled', 'Бронирование отменено'),
+        ('booking_reminder_24h', 'Напоминание за 24 часа'),
+        ('booking_reminder_1h', 'Напоминание за 1 час'),
+        ('payment_success', 'Оплата успешна'),
+        ('payment_failed', 'Ошибка оплаты'),
+        ('payment_pending', 'Ожидает оплаты'),
+        ('rating_updated', 'Рейтинг обновлен'),
+        ('booking_invitation', 'Приглашение в бронирование'),
+        ('invitation_accepted', 'Приглашение принято'),
+        ('invitation_declined', 'Приглашение отклонено'),
+        ('partner_joined', 'Партнёр присоединился'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='Пользователь'
+    )
+    type = models.CharField(
+        max_length=50,
+        choices=NOTIFICATION_TYPES,
+        db_index=True,
+        verbose_name='Тип уведомления'
+    )
+    title = models.CharField(
+        max_length=255,
+        verbose_name='Заголовок'
+    )
+    message = models.TextField(verbose_name='Сообщение')
+    email_sent = models.BooleanField(
+        default=False,
+        verbose_name='Email отправлен'
+    )
+    sms_sent = models.BooleanField(
+        default=False,
+        verbose_name='SMS отправлено'
+    )
+    push_sent = models.BooleanField(
+        default=False,
+        verbose_name='Push отправлено'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name='Прочитано'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name='Дата создания'
+    )
+    read_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Дата прочтения'
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Дополнительные данные'
+    )
+
+    class Meta:
+        verbose_name = 'Уведомление'
+        verbose_name_plural = 'Уведомления'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['type']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+        display_name = full_name if full_name else self.user.username
+        return f"{display_name} - {self.get_type_display()}"
+
+    def mark_as_read(self):
+        """Отметить уведомление как прочитанное"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+
+class PlayerCoachRelationship(models.Model):
+    """Связь между игроком и тренером"""
+
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='coaches',
+        verbose_name='Игрок'
+    )
+    coach = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='players',
+        verbose_name='Тренер'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активная связь'
+    )
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата назначения'
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name='Примечания'
+    )
+
+    class Meta:
+        verbose_name = 'Связь игрок-тренер'
+        verbose_name_plural = 'Связи игрок-тренер'
+        unique_together = ('player', 'coach')
+
+    def __str__(self):
+        player_name = f"{self.player.first_name} {self.player.last_name}".strip() or self.player.username
+        coach_name = f"{self.coach.first_name} {self.coach.last_name}".strip() or self.coach.username
+        return f"{player_name} - {coach_name}"

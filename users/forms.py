@@ -78,6 +78,48 @@ class AvatarUploadForm(forms.Form):
 
 
 class RegistrationForm(UserCreationForm):
+    first_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label='Имя',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введите ваше имя',
+            'class': 'form-input',
+            'id': 'regFirstName'
+        }),
+        error_messages={
+            'required': 'Имя обязательно',
+        }
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label='Фамилия',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введите вашу фамилию',
+            'class': 'form-input',
+            'id': 'regLastName'
+        }),
+        error_messages={
+            'required': 'Фамилия обязательна',
+        }
+    )
+
+    email = forms.EmailField(
+        required=True,
+        label='Email',
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'example@email.com',
+            'class': 'form-input',
+            'id': 'regEmail'
+        }),
+        error_messages={
+            'required': 'Email обязателен',
+            'invalid': 'Введите корректный email адрес',
+        }
+    )
+
     phone = forms.CharField(
         max_length=20,
         required=True,
@@ -95,22 +137,17 @@ class RegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['username', 'phone', 'password1', 'password2']
+        fields = ['first_name', 'last_name', 'email', 'phone', 'password1', 'password2']
         help_texts = {
-            'username': 'Обязательное поле. Не более 150 символов. Только буквы, цифры и @/./+/-/_',
             'password1': 'Пароль должен содержать минимум 8 символов',
-        }
-        error_messages = {
-            'username': {
-                'unique': 'Это имя пользователя уже занято',
-                'required': 'Имя пользователя обязательно',
-            },
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Делаем поля обязательными в HTML
-        self.fields['username'].required = True
+        self.fields['first_name'].required = True
+        self.fields['last_name'].required = True
+        self.fields['email'].required = True
         self.fields['password1'].required = True
         self.fields['password2'].required = True
 
@@ -191,27 +228,45 @@ class RegistrationForm(UserCreationForm):
 
         return formatted_phone
 
-    def clean_username(self):
-        username = self.cleaned_data.get('username', '').strip()
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name', '').strip()
 
-        if not username:
-            raise ValidationError('Имя пользователя обязательно')
+        if not first_name:
+            raise ValidationError('Имя обязательно')
 
-        if len(username) < 3:
-            raise ValidationError('Имя пользователя должно содержать минимум 3 символа')
+        if len(first_name) < 2:
+            raise ValidationError('Имя должно содержать минимум 2 символа')
 
-        if len(username) > 150:
-            raise ValidationError('Имя пользователя не должно превышать 150 символов')
+        if len(first_name) > 150:
+            raise ValidationError('Имя не должно превышать 150 символов')
 
-        if not re.match(r'^[\w.@+-]+$', username):
-            raise ValidationError(
-                'Имя пользователя содержит недопустимые символы. Разрешены только буквы, цифры и @/./+/-/_')
+        return first_name
 
-        # Проверяем уникальность
-        if User.objects.filter(username=username).exists():
-            raise ValidationError('Это имя пользователя уже занято')
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name', '').strip()
 
-        return username
+        if not last_name:
+            raise ValidationError('Фамилия обязательна')
+
+        if len(last_name) < 2:
+            raise ValidationError('Фамилия должна содержать минимум 2 символа')
+
+        if len(last_name) > 150:
+            raise ValidationError('Фамилия не должна превышать 150 символов')
+
+        return last_name
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+
+        if not email:
+            raise ValidationError('Email обязателен')
+
+        # Проверяем уникальность email
+        if User.objects.filter(email=email).exists():
+            raise ValidationError('Этот email уже зарегистрирован')
+
+        return email
 
     def clean(self):
         """Дополнительная проверка всей формы"""
@@ -229,6 +284,31 @@ class RegistrationForm(UserCreationForm):
     def save(self, commit=True):
         """Атомарное сохранение пользователя с проверкой уникальности телефона"""
         user = super().save(commit=False)
+
+        # Получаем данные из формы
+        first_name = self.cleaned_data.get('first_name')
+        last_name = self.cleaned_data.get('last_name')
+        email = self.cleaned_data.get('email')
+
+        # Устанавливаем first_name, last_name и email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+
+        # Генерируем уникальный username из email
+        # Берем часть до @ и добавляем уникальный номер если нужно
+        email_base = email.split('@')[0]
+        # Очищаем от недопустимых символов
+        username_base = re.sub(r'[^\w.@+-]', '_', email_base)[:30]  # Ограничиваем длину
+
+        # Находим уникальный username
+        username = username_base
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{username_base}_{counter}"
+            counter += 1
+
+        user.username = username
 
         if not commit:
             return user
@@ -284,8 +364,10 @@ class RegistrationForm(UserCreationForm):
                 # 9. Логируем успешную регистрацию
                 print(f"\n{'=' * 50}")
                 print(f"УСПЕШНАЯ РЕГИСТРАЦИЯ")
-                print(f"Пользователь: {user.username}")
+                print(f"Имя: {user.first_name} {user.last_name}")
+                print(f"Email: {user.email}")
                 print(f"Телефон: {profile.phone}")
+                print(f"Username (автогенерация): {user.username}")
                 print(f"Уникальный ID: {user.id}")
                 print(f"{'=' * 50}\n")
 
@@ -311,13 +393,13 @@ class LoginForm(forms.Form):
     identifier = forms.CharField(
         max_length=150,
         required=True,
-        label='Имя пользователя или телефон',
+        label='Email или телефон',
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': 'Введите имя пользователя или номер телефона',
+            'placeholder': 'Введите email или номер телефона',
             'id': 'loginIdentifier'
         }),
-        help_text='Можно ввести имя пользователя или номер телефона (+7...)'
+        help_text='Можно ввести email или номер телефона (+7...)'
     )
 
     password = forms.CharField(
@@ -333,10 +415,11 @@ class LoginForm(forms.Form):
         identifier = self.cleaned_data.get('identifier', '').strip()
 
         if not identifier:
-            raise ValidationError('Введите имя пользователя или номер телефона')
+            raise ValidationError('Введите email или номер телефона')
 
-        # Проверяем, похоже ли на телефон (содержит цифры)
-        if any(char.isdigit() for char in identifier):
+        # Проверяем, похоже ли на телефон (содержит цифры и мало букв)
+        digit_count = sum(c.isdigit() for c in identifier)
+        if digit_count >= 7:  # Если есть 7+ цифр, скорее всего телефон
             # Пытаемся нормализовать телефон
             normalized_phone = UserProfile.objects.normalize_phone(identifier)
             if normalized_phone:
@@ -344,19 +427,20 @@ class LoginForm(forms.Form):
                 user = UserProfile.objects.get_user_by_phone(identifier)
                 if user:
                     return {'type': 'phone', 'value': normalized_phone, 'username': user.username}
+                else:
+                    raise ValidationError('Пользователь с таким номером телефона не найден')
 
-        # Если не телефон или не нашли по телефону, считаем username
-        if len(identifier) < 3:
-            raise ValidationError('Имя пользователя должно содержать минимум 3 символа')
+        # Проверяем, похоже ли на email (содержит @)
+        if '@' in identifier:
+            email = identifier.lower()
+            try:
+                user = User.objects.get(email=email)
+                return {'type': 'email', 'value': email, 'username': user.username}
+            except User.DoesNotExist:
+                raise ValidationError('Пользователь с таким email не найден')
 
-        if len(identifier) > 150:
-            raise ValidationError('Имя пользователя не должно превышать 150 символов')
-
-        if not re.match(r'^[\w.@+-]+$', identifier):
-            raise ValidationError(
-                'Имя пользователя содержит недопустимые символы. Разрешены только буквы, цифры и @/./+/-/_')
-
-        return {'type': 'username', 'value': identifier, 'username': identifier}
+        # Если не телефон и не email
+        raise ValidationError('Введите корректный email или номер телефона')
 
     def clean_password(self):
         password = self.cleaned_data.get('password')
@@ -372,15 +456,8 @@ class LoginForm(forms.Form):
         password = cleaned_data.get('password')
 
         if identifier_data and password:
-            # Проверяем существование пользователя
-            if identifier_data['type'] == 'username':
-                # Для username проверяем существование пользователя
-                if not User.objects.filter(username=identifier_data['value']).exists():
-                    self.add_error('identifier', 'Пользователь с таким именем не найден')
-            else:
-                # Для телефона проверяем существование профиля
-                if not UserProfile.objects.get_user_by_phone(identifier_data['value']):
-                    self.add_error('identifier', 'Пользователь с таким номером телефона не найден')
+            # Проверка уже выполнена в clean_identifier
+            pass
 
         return cleaned_data
 
@@ -398,17 +475,35 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email']
-        error_messages = {
-            'username': {
-                'unique': 'Это имя пользователя уже занято',
-            },
+        fields = ['first_name', 'last_name', 'email']
+        labels = {
+            'first_name': 'Имя',
+            'last_name': 'Фамилия',
+            'email': 'Email',
+        }
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Введите ваше имя'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Введите вашу фамилию'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'example@email.com'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and hasattr(self.instance, 'profile'):
             self.fields['phone'].initial = self.instance.profile.phone
+        # Делаем поля обязательными
+        self.fields['first_name'].required = True
+        self.fields['last_name'].required = True
+        self.fields['email'].required = True
 
     def clean_phone(self):
         phone = self.cleaned_data.get('phone', '').strip()
@@ -453,6 +548,44 @@ class ProfileUpdateForm(forms.ModelForm):
                     raise ValidationError(f'Этот номер телефона уже используется: {", ".join(users)}')
 
         return formatted_phone
+
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name', '').strip()
+
+        if not first_name:
+            raise ValidationError('Имя обязательно')
+
+        if len(first_name) < 2:
+            raise ValidationError('Имя должно содержать минимум 2 символа')
+
+        return first_name
+
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name', '').strip()
+
+        if not last_name:
+            raise ValidationError('Фамилия обязательна')
+
+        if len(last_name) < 2:
+            raise ValidationError('Фамилия должна содержать минимум 2 символа')
+
+        return last_name
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+
+        if not email:
+            raise ValidationError('Email обязателен')
+
+        # Проверяем уникальность email (исключая текущего пользователя)
+        qs = User.objects.filter(email=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise ValidationError('Этот email уже используется другим пользователем')
+
+        return email
 
 from django import forms
 from .models import PlayerRating

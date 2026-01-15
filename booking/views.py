@@ -71,7 +71,7 @@ def get_available_slots(request):
             court=court,
             date=booking_date,
             status__in=['pending', 'confirmed']
-        )
+        ).select_related('user', 'user__profile', 'user__rating').prefetch_related('partners')
 
         print(f"🔍 DEBUG: Found {existing_bookings.count()} existing bookings")
 
@@ -88,7 +88,8 @@ def get_available_slots(request):
         WORKING_HOURS_START = 8
         WORKING_HOURS_END = 22
 
-        all_slots = []
+        # ТОЛЬКО СВОБОДНЫЕ СЛОТЫ
+        free_slots = []
 
         # Только если сегодняшняя дата
         if booking_date == today:
@@ -104,36 +105,84 @@ def get_available_slots(request):
             # Если сегодня, нельзя бронировать прошедшее время
             if booking_date == today and hour < current_hour:
                 is_available = False
-                print(f"🔍 DEBUG: Hour {hour}:00 is in the past (current hour: {current_hour})")
 
-            all_slots.append({
-                'start_time': f"{hour:02d}:00",
-                'end_time': f"{(hour + 1):02d}:00",
-                'is_available': is_available,
-                'duration': 1,
-                'hour': hour
+            # ДОБАВЛЯЕМ ТОЛЬКО СВОБОДНЫЕ СЛОТЫ
+            if is_available:
+                free_slots.append({
+                    'type': 'free_slot',
+                    'start_time': f"{hour:02d}:00",
+                    'end_time': f"{(hour + 1):02d}:00",
+                    'duration': 1,
+                    'hour': hour
+                })
+
+        # Получаем рейтинг текущего пользователя (если залогинен)
+        user_rating = None
+        if request.user.is_authenticated:
+            try:
+                user_rating = request.user.rating.level
+            except:
+                user_rating = None
+
+        # Ищем бронирования с "Найти партнёра"
+        partner_bookings = []
+        for booking in existing_bookings:
+            # Пропускаем, если не ищет партнёра или уже полное
+            if not booking.looking_for_partner or booking.is_full:
+                continue
+
+            # Пропускаем свои бронирования
+            if request.user.is_authenticated and (booking.user == request.user or request.user in booking.partners.all()):
+                continue
+
+            # Проверяем рейтинг
+            can_join = True
+            join_message = ""
+
+            if request.user.is_authenticated:
+                can_join, join_message = booking.can_join(request.user)
+
+            # Формируем информацию о бронировании
+            user_full_name = f"{booking.user.first_name} {booking.user.last_name}".strip() or booking.user.username
+
+            partner_bookings.append({
+                'type': 'partner_booking',
+                'booking_id': booking.id,
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'hour': booking.start_time.hour,
+                'creator_name': user_full_name,
+                'creator_rating': booking.user.rating.level if hasattr(booking.user, 'rating') else None,
+                'required_rating': booking.required_rating_level,
+                'current_players': 1 + booking.partners.count(),
+                'max_players': booking.max_players,
+                'available_slots': booking.available_slots,
+                'price_per_person': float(booking.price_per_person),
+                'can_join': can_join,
+                'join_message': join_message
             })
 
-        # Подсчет статистики
-        available_count = sum(1 for slot in all_slots if slot['is_available'])
+        # Объединяем свободные слоты и бронирования с партнёрами
+        all_items = free_slots + partner_bookings
+        # Сортируем по времени начала
+        all_items.sort(key=lambda x: x['hour'])
 
-        print(f"🔍 DEBUG: Available slots: {available_count}/{len(all_slots)}")
-        print(f"🔍 DEBUG: Booked hours dict: {booked_hours}")
+        print(f"🔍 DEBUG: Free slots: {len(free_slots)}, Partner bookings: {len(partner_bookings)}")
 
         result = {
             'success': True,
-            'slots': all_slots,
+            'items': all_items,  # Смешанный список: свободные слоты + бронирования с партнёрами
             'court_price': float(court.price_per_hour),
             'court_name': court.name,
             'court_id': court.id,
             'date': date_str,
             'date_formatted': booking_date.strftime('%d.%m.%Y'),
-            'available_count': available_count,
-            'total_slots': len(all_slots)
+            'free_slots_count': len(free_slots),
+            'partner_bookings_count': len(partner_bookings),
+            'user_rating': user_rating
         }
 
-        print(f"✅ DEBUG: Returning JSON response with {len(all_slots)} slots")
-        print(f"✅ DEBUG: Slots availability: {[(s['start_time'], s['is_available']) for s in all_slots]}")
+        print(f"✅ DEBUG: Returning {len(all_items)} items (free slots + partner bookings)")
 
         response = JsonResponse(result)
         response['Content-Type'] = 'application/json; charset=utf-8'
@@ -748,3 +797,291 @@ def my_bookings(request):
         booking.hours_until_confirmation_attr = booking.hours_until_confirmation
 
     return render(request, 'users/bookings.html', {'bookings': bookings, 'today': today})
+
+
+# ========== ПОИСК ПАРТНЁРОВ И ПРИГЛАШЕНИЯ ==========
+
+@login_required
+def find_partners(request):
+    """Страница поиска партнёров - бронирования, которые ищут игроков"""
+    today = timezone.now().date()
+
+    # Получаем бронирования, которые ищут партнёров
+    available_bookings = Booking.objects.filter(
+        looking_for_partner=True,
+        status__in=['pending', 'confirmed'],
+        date__gte=today
+    ).select_related('user', 'user__profile', 'user__rating', 'court').prefetch_related('partners').order_by('date', 'start_time')
+
+    # Фильтруем бронирования, в которых есть свободные места
+    bookings_with_slots = []
+    user_rating = None
+
+    try:
+        user_rating = request.user.rating.level
+    except:
+        user_rating = None
+
+    for booking in available_bookings:
+        # Пропускаем свои бронирования
+        if booking.user == request.user or request.user in booking.partners.all():
+            continue
+
+        # Проверяем наличие мест
+        if not booking.is_full:
+            can_join, message = booking.can_join(request.user)
+            booking.can_join_flag = can_join
+            booking.join_message = message
+            bookings_with_slots.append(booking)
+
+    context = {
+        'bookings': bookings_with_slots,
+        'user_rating': user_rating,
+        'today': today
+    }
+
+    return render(request, 'booking/find_partners.html', context)
+
+
+@login_required
+@require_POST
+def join_booking(request, booking_id):
+    """Присоединиться к бронированию"""
+    try:
+        booking = get_object_or_404(Booking, id=booking_id)
+
+        # Проверяем, можно ли присоединиться
+        can_join, message = booking.can_join(request.user)
+        if not can_join:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            })
+
+        # Добавляем пользователя в партнёры
+        success, msg = booking.add_partner(request.user)
+
+        if success:
+            # Отправляем уведомление создателю бронирования
+            from users.services import NotificationService
+            NotificationService.send_partner_joined_notification(booking, request.user)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Вы успешно присоединились! Стоимость на человека: {booking.price_per_person} руб.',
+                'price_per_person': booking.price_per_person,
+                'available_slots': booking.available_slots
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': msg
+            })
+
+    except Exception as e:
+        logger.error(f"Error joining booking {booking_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при присоединении'
+        })
+
+
+@login_required
+def send_invitation(request, booking_id):
+    """Отправить приглашение другу"""
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+
+    if request.method == 'POST':
+        from .forms import InviteFriendForm
+        form = InviteFriendForm(request.POST, booking=booking, inviter=request.user)
+
+        if form.is_valid():
+            invitation = form.save()
+
+            # Отправляем уведомление приглашённому
+            from users.services import NotificationService
+            if invitation.invitee:
+                NotificationService.send_booking_invitation_notification(invitation)
+
+            messages.success(request, 'Приглашение успешно отправлено!')
+            return redirect('booking_detail', booking_id=booking_id)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+            return redirect('booking_detail', booking_id=booking_id)
+
+    else:
+        from .forms import InviteFriendForm
+        form = InviteFriendForm(booking=booking, inviter=request.user)
+
+    context = {
+        'form': form,
+        'booking': booking
+    }
+
+    return render(request, 'booking/send_invitation.html', context)
+
+
+@login_required
+def my_invitations(request):
+    """Список приглашений пользователя"""
+    from .models import BookingInvitation
+
+    # Полученные приглашения
+    received_invitations = BookingInvitation.objects.filter(
+        invitee=request.user,
+        status='pending'
+    ).select_related('booking', 'booking__court', 'inviter', 'inviter__profile').order_by('-created_at')
+
+    # Отправленные приглашения
+    sent_invitations = BookingInvitation.objects.filter(
+        inviter=request.user
+    ).select_related('booking', 'booking__court', 'invitee', 'invitee__profile').order_by('-created_at')[:10]
+
+    context = {
+        'received_invitations': received_invitations,
+        'sent_invitations': sent_invitations
+    }
+
+    return render(request, 'booking/my_invitations.html', context)
+
+
+@login_required
+@require_POST
+def accept_invitation(request, invitation_id):
+    """Принять приглашение"""
+    from .models import BookingInvitation
+
+    try:
+        invitation = get_object_or_404(BookingInvitation, id=invitation_id, invitee=request.user)
+
+        success, message = invitation.accept()
+
+        if success:
+            # Уведомляем отправителя
+            from users.services import NotificationService
+            NotificationService.send_invitation_accepted_notification(invitation)
+
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'booking_id': invitation.booking.id
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            })
+
+    except Exception as e:
+        logger.error(f"Error accepting invitation {invitation_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при принятии приглашения'
+        })
+
+
+@login_required
+@require_POST
+def decline_invitation(request, invitation_id):
+    """Отклонить приглашение"""
+    from .models import BookingInvitation
+
+    try:
+        invitation = get_object_or_404(BookingInvitation, id=invitation_id, invitee=request.user)
+
+        success, message = invitation.decline()
+
+        if success:
+            # Уведомляем отправителя
+            from users.services import NotificationService
+            NotificationService.send_invitation_declined_notification(invitation)
+
+            return JsonResponse({
+                'success': True,
+                'message': message
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            })
+
+    except Exception as e:
+        logger.error(f"Error declining invitation {invitation_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при отклонении приглашения'
+        })
+
+
+@login_required
+@require_POST
+def cancel_invitation(request, invitation_id):
+    """Отменить отправленное приглашение"""
+    from .models import BookingInvitation
+
+    try:
+        invitation = get_object_or_404(BookingInvitation, id=invitation_id, inviter=request.user)
+
+        success, message = invitation.cancel()
+
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': message
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            })
+
+    except Exception as e:
+        logger.error(f"Error cancelling invitation {invitation_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при отмене приглашения'
+        })
+
+
+@login_required
+def booking_detail(request, booking_id):
+    """Детальная страница бронирования с возможностью приглашения друзей"""
+    from .models import BookingInvitation
+    from .forms import InviteFriendForm
+
+    # Получаем бронирование (создатель или партнёр)
+    booking = get_object_or_404(
+        Booking.objects.prefetch_related('partners', 'invitations'),
+        Q(user=request.user) | Q(partners=request.user),
+        id=booking_id
+    )
+
+    # Проверяем права доступа
+    is_creator = booking.user == request.user
+    is_partner = request.user in booking.partners.all()
+
+    if not (is_creator or is_partner):
+        messages.error(request, 'У вас нет доступа к этому бронированию')
+        return redirect('profile')
+
+    # Получаем все приглашения для этого бронирования
+    invitations = booking.invitations.all().order_by('-created_at')
+
+    # Форма для приглашения (только для создателя)
+    invite_form = None
+    if is_creator and not booking.is_full:
+        invite_form = InviteFriendForm(booking=booking, inviter=request.user)
+
+    context = {
+        'booking': booking,
+        'is_creator': is_creator,
+        'is_partner': is_partner,
+        'invitations': invitations,
+        'invite_form': invite_form,
+        'today': timezone.now().date()
+    }
+
+    return render(request, 'booking/booking_detail.html', context)

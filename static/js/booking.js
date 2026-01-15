@@ -519,7 +519,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 console.log('🎯 Rendering slots...');
-                renderTimeSlotsBySections(data.slots, data.court_price, data.court_name);
+                // Новый формат: data.items вместо data.slots
+                renderTimeSlotsBySections(data.items || data.slots, data.court_price, data.court_name);
 
                 if (data.available_count === 0) {
                     console.log('⚠️ No available slots');
@@ -536,56 +537,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отрисовка временных слотов по секциям
-    function renderTimeSlotsBySections(slots, courtPrice, courtName) {
-        console.log('🎨 Отрисовка слотов по секциям:', slots ? slots.length : 0, 'шт.');
-        console.log('🎨 Полученные слоты:', slots);
+    function renderTimeSlotsBySections(items, courtPrice, courtName) {
+        console.log('🎨 Отрисовка слотов по секциям:', items ? items.length : 0, 'шт.');
+        console.log('🎨 Полученные items:', items);
 
-        if (!slots || !Array.isArray(slots) || slots.length === 0) {
-            console.error('❌ No slots or slots is not an array:', slots);
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            console.error('❌ No items or items is not an array:', items);
             showTimeSlotsMessage('Нет доступных слотов на выбранную дату');
             return;
         }
 
-        // Распределяем слоты по секциям - ИСПРАВЛЕННАЯ ФИЛЬТРАЦИЯ
-        const morningSlots = slots.filter(slot => {
-            const hour = parseInt(slot.start_time.split(':')[0]);
+        // Распределяем items по секциям - НОВАЯ ЛОГИКА С ПОДДЕРЖКОЙ ТИПОВ
+        const morningItems = items.filter(item => {
+            const hour = item.hour;
             return hour >= 8 && hour < 12;
         });
 
-        const daySlots = slots.filter(slot => {
-            const hour = parseInt(slot.start_time.split(':')[0]);
+        const dayItems = items.filter(item => {
+            const hour = item.hour;
             return hour >= 12 && hour < 17;
         });
 
-        const eveningSlots = slots.filter(slot => {
-            const hour = parseInt(slot.start_time.split(':')[0]);
+        const eveningItems = items.filter(item => {
+            const hour = item.hour;
             return hour >= 17 && hour < 22;
         });
 
-        console.log('📊 Morning slots:', morningSlots.length, morningSlots);
-        console.log('📊 Day slots:', daySlots.length, daySlots);
-        console.log('📊 Evening slots:', eveningSlots.length, eveningSlots);
+        console.log('📊 Morning items:', morningItems.length, morningItems);
+        console.log('📊 Day items:', dayItems.length, dayItems);
+        console.log('📊 Evening items:', eveningItems.length, eveningItems);
 
         // Отрисовываем каждую секцию
-        renderTimeSection('morning', morningSlots, courtPrice, courtName);
-        renderTimeSection('day', daySlots, courtPrice, courtName);
-        renderTimeSection('evening', eveningSlots, courtPrice, courtName);
+        renderTimeSection('morning', morningItems, courtPrice, courtName);
+        renderTimeSection('day', dayItems, courtPrice, courtName);
+        renderTimeSection('evening', eveningItems, courtPrice, courtName);
 
         console.log('✅ Слоты отрисованы по секциям');
     }
 
     // Отрисовка одной секции времени
-    function renderTimeSection(sectionName, slots, courtPrice, courtName) {
+    function renderTimeSection(sectionName, items, courtPrice, courtName) {
         const sectionContent = document.getElementById(`${sectionName}-slots`);
         if (!sectionContent) {
             console.error(`❌ Section content not found: ${sectionName}-slots`);
             return;
         }
 
-        console.log(`🎯 Rendering section: ${sectionName} with ${slots.length} slots`);
+        console.log(`🎯 Rendering section: ${sectionName} with ${items.length} items`);
 
-        if (!slots || slots.length === 0) {
-            console.log(`⚠️ No slots for section: ${sectionName}`);
+        if (!items || items.length === 0) {
+            console.log(`⚠️ No items for section: ${sectionName}`);
             sectionContent.innerHTML = `
                 <div class="select-court-date" style="text-align: center; padding: 40px; color: #777;">
                     <i class="fas fa-calendar-times" style="font-size: 48px; margin-bottom: 15px;"></i>
@@ -605,16 +606,16 @@ document.addEventListener('DOMContentLoaded', function() {
             margin-top: 10px;
         `;
 
-        slots.forEach(slot => {
-            console.log(`🎯 Slot for ${sectionName}: ${slot.start_time} - Available: ${slot.is_available}`);
-            const slotElement = createTimeSlotElement(slot, courtPrice, courtName);
-            grid.appendChild(slotElement);
+        items.forEach(item => {
+            console.log(`🎯 Item for ${sectionName}:`, item);
+            const itemElement = createTimeSlotElement(item, courtPrice, courtName);
+            grid.appendChild(itemElement);
         });
 
         sectionContent.innerHTML = '';
         sectionContent.appendChild(grid);
 
-        console.log(`✅ Section ${sectionName} rendered with ${slots.length} slots`);
+        console.log(`✅ Section ${sectionName} rendered with ${items.length} items`);
     }
 
     // Отрисовка временных слотов (старый layout)
@@ -654,53 +655,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Создание элемента временного слота
-    function createTimeSlotElement(slot, courtPrice, courtName) {
-        console.log(`🎯 Creating slot element: ${slot.start_time}, available: ${slot.is_available}`);
+    function createTimeSlotElement(item, courtPrice, courtName) {
+        console.log(`🎯 Creating element:`, item);
 
+        // Проверяем тип элемента
+        if (item.type === 'partner_booking') {
+            return createPartnerBookingElement(item);
+        } else {
+            return createFreeSlotElement(item, courtPrice, courtName);
+        }
+    }
+
+    // Создание элемента свободного слота
+    function createFreeSlotElement(slot, courtPrice, courtName) {
         let slotElement;
 
         if (isNewLayout) {
             slotElement = document.createElement('div');
-            slotElement.className = `time-slot-card ${slot.is_available ? 'available' : 'unavailable'}`;
+            slotElement.className = 'time-slot-card available';
             slotElement.style.cssText = `
                 background: white;
                 border-radius: 12px;
                 padding: 20px;
-                cursor: ${slot.is_available ? 'pointer' : 'not-allowed'};
+                cursor: pointer;
                 transition: all 0.3s ease;
-                border: 3px solid ${slot.is_available ? '#bff167' : '#eee'};
+                border: 3px solid #bff167;
                 text-align: center;
-                opacity: ${slot.is_available ? '1' : '0.5'};
+                opacity: 1;
             `;
 
             slotElement.innerHTML = `
                 <div class="slot-time" style="display: block; font-weight: 700; color: #333; font-size: 18px; margin-bottom: 8px;">${slot.start_time}</div>
                 <div class="slot-price" style="display: block; font-size: 16px; color: #38b000; font-weight: 600; margin-bottom: 5px;">${courtPrice} ₽</div>
-                <div class="slot-status" style="font-size: 12px; color: ${slot.is_available ? '#38b000' : '#dc3545'}; text-transform: uppercase; letter-spacing: 0.5px;">
-                    <i class="fas fa-${slot.is_available ? 'check-circle' : 'times-circle'}"></i>
-                    <span>${slot.is_available ? 'Доступно' : 'Занято'}</span>
+                <div class="slot-status" style="font-size: 12px; color: #38b000; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Доступно</span>
                 </div>
-                ${slot.is_available ?
-                    '<div class="slot-hint" style="font-size: 11px; color: #666; margin-top: 5px;">Нажмите для выбора</div>' :
-                    ''
-                }
+                <div class="slot-hint" style="font-size: 11px; color: #666; margin-top: 5px;">Нажмите для выбора</div>
             `;
         } else {
             slotElement = document.createElement('div');
-            slotElement.className = `time-slot ${slot.is_available ? 'available' : 'unavailable'}`;
+            slotElement.className = 'time-slot available';
 
             slotElement.innerHTML = `
                 <div class="slot-content">
                     <div class="slot-time">${slot.start_time} - ${slot.end_time}</div>
                     <div class="slot-status">
-                        <i class="fas fa-${slot.is_available ? 'check-circle' : 'times-circle'}"></i>
-                        <span>${slot.is_available ? 'Доступно' : 'Занято'}</span>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Доступно</span>
                     </div>
-                    ${slot.is_available ?
-                        `<div class="slot-price">${courtPrice} ₽/час</div>
-                         <div class="slot-hint">Нажмите для выбора</div>`
-                        : ''
-                    }
+                    <div class="slot-price">${courtPrice} ₽/час</div>
+                    <div class="slot-hint">Нажмите для выбора</div>
                 </div>
             `;
         }
@@ -708,44 +713,190 @@ document.addEventListener('DOMContentLoaded', function() {
         slotElement.dataset.startTime = slot.start_time;
         slotElement.dataset.endTime = slot.end_time;
         slotElement.dataset.hour = slot.hour;
-        slotElement.dataset.isAvailable = slot.is_available;
+        slotElement.dataset.isAvailable = true;
 
-        if (slot.is_available) {
-            slotElement.style.cursor = 'pointer';
-            slotElement.title = `Нажмите для бронирования ${slot.start_time}`;
+        slotElement.style.cursor = 'pointer';
+        slotElement.title = `Нажмите для бронирования ${slot.start_time}`;
 
-            slotElement.addEventListener('click', function() {
-                handleTimeSlotSelection(this, courtPrice, courtName);
-            });
+        slotElement.addEventListener('click', function() {
+            handleTimeSlotSelection(this, courtPrice, courtName);
+        });
 
-            // Hover эффекты
-            slotElement.addEventListener('mouseenter', function() {
-                if (!this.classList.contains('selected')) {
-                    if (isNewLayout) {
-                        this.style.transform = 'translateY(-5px)';
-                        this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
-                    } else {
-                        this.style.transform = 'translateX(5px)';
-                    }
+        // Hover эффекты
+        slotElement.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('selected')) {
+                if (isNewLayout) {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+                } else {
+                    this.style.transform = 'translateX(5px)';
                 }
-            });
+            }
+        });
 
-            slotElement.addEventListener('mouseleave', function() {
-                if (!this.classList.contains('selected')) {
-                    if (isNewLayout) {
-                        this.style.transform = 'translateY(0)';
-                        this.style.boxShadow = 'none';
-                    } else {
-                        this.style.transform = 'translateX(0)';
-                    }
+        slotElement.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('selected')) {
+                if (isNewLayout) {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                } else {
+                    this.style.transform = 'translateX(0)';
                 }
-            });
-        } else {
-            slotElement.style.cursor = 'not-allowed';
-            slotElement.title = 'Это время уже занято';
-        }
+            }
+        });
 
         return slotElement;
+    }
+
+    // Создание элемента бронирования с поиском партнёра
+    function createPartnerBookingElement(booking) {
+        const bookingElement = document.createElement('div');
+        bookingElement.className = 'partner-booking-card';
+
+        const canJoin = booking.can_join;
+        const borderColor = canJoin ? '#9ef01a' : '#ff6b6b';
+        const bgColor = canJoin ? '#f0ffe0' : '#fff5f5';
+
+        bookingElement.style.cssText = `
+            background: ${bgColor};
+            border-radius: 12px;
+            padding: 15px;
+            cursor: ${canJoin ? 'pointer' : 'not-allowed'};
+            transition: all 0.3s ease;
+            border: 3px solid ${borderColor};
+            opacity: ${canJoin ? '1' : '0.7'};
+        `;
+
+        const joinButtonHtml = canJoin ?
+            `<button style="
+                width: 100%;
+                padding: 10px;
+                background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%);
+                color: #333;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 10px;
+                transition: all 0.3s;
+            " class="join-partner-btn">
+                <i class="fas fa-user-plus"></i> Присоединиться
+            </button>` :
+            `<div style="
+                width: 100%;
+                padding: 8px;
+                background: #ffebee;
+                color: #c62828;
+                border-radius: 6px;
+                font-size: 11px;
+                text-align: center;
+                margin-top: 10px;
+            ">
+                <i class="fas fa-exclamation-circle"></i> ${booking.join_message || 'Недоступно'}
+            </div>`;
+
+        bookingElement.innerHTML = `
+            <div style="text-align: center;">
+                <div style="font-weight: 700; color: #333; font-size: 16px; margin-bottom: 5px;">
+                    <i class="fas fa-clock"></i> ${booking.start_time}
+                </div>
+                <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                    <i class="fas fa-users"></i> Найти партнёра
+                </div>
+                <div style="font-size: 14px; color: #333; margin-bottom: 5px;">
+                    <strong>${booking.creator_name}</strong>
+                </div>
+                <div style="font-size: 12px; color: #38b000; margin-bottom: 5px;">
+                    Рейтинг: ${booking.creator_rating || 'Не указан'}
+                </div>
+                <div style="font-size: 13px; color: #333; margin-bottom: 5px;">
+                    Игроков: ${booking.current_players}/${booking.max_players}
+                </div>
+                <div style="font-size: 15px; color: #38b000; font-weight: bold; margin-bottom: 5px;">
+                    ${Math.round(booking.price_per_person)} ₽/чел
+                </div>
+                ${booking.required_rating ?
+                    `<div style="font-size: 11px; color: #666; margin-bottom: 5px;">
+                        Требуемый уровень: ${booking.required_rating}
+                    </div>` : ''
+                }
+                ${joinButtonHtml}
+            </div>
+        `;
+
+        bookingElement.dataset.bookingId = booking.booking_id;
+        bookingElement.dataset.startTime = booking.start_time;
+        bookingElement.dataset.endTime = booking.end_time;
+        bookingElement.dataset.hour = booking.hour;
+
+        if (canJoin) {
+            const joinBtn = bookingElement.querySelector('.join-partner-btn');
+            if (joinBtn) {
+                joinBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    handleJoinPartnerBooking(booking.booking_id);
+                });
+
+                joinBtn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.boxShadow = '0 5px 15px rgba(158, 240, 26, 0.3)';
+                });
+
+                joinBtn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                });
+            }
+
+            bookingElement.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+                this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+            });
+
+            bookingElement.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = 'none';
+            });
+        }
+
+        return bookingElement;
+    }
+
+    // Обработчик присоединения к бронированию
+    function handleJoinPartnerBooking(bookingId) {
+        if (!isUserAuthenticated) {
+            showMessage('Пожалуйста, войдите в систему для присоединения к бронированию', 'error');
+            window.location.href = '/users/login/';
+            return;
+        }
+
+        console.log('🎯 Присоединение к бронированию:', bookingId);
+
+        // Подтверждение
+        if (confirm('Вы уверены, что хотите присоединиться к этому бронированию?')) {
+            fetch(`/booking/join/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Вы успешно присоединились к бронированию!', 'success');
+                    // Перенаправляем на страницу деталей бронирования
+                    window.location.href = `/booking/detail/${bookingId}/`;
+                } else {
+                    showMessage(data.message || 'Ошибка при присоединении', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error joining booking:', error);
+                showMessage('Ошибка при присоединении. Попробуйте позже.', 'error');
+            });
+        }
     }
 
     // Выбор временного слота

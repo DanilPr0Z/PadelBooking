@@ -1,0 +1,31 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Подтверждение телефона{% endblock %}
+
+{% block email_header %}Подтверждение телефона{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p>Для подтверждения вашего номера телефона используйте следующий код:</p>
+
+<div class="booking-details" style="text-align: center; font-size: 32px; font-weight: bold; color: #38b000; letter-spacing: 8px; padding: 40px 20px;">
+    {{ verification_code }}
+</div>
+
+<p>Введите этот код на странице подтверждения телефона.</p>
+
+<p><strong>Важно:</strong> Этот код действителен в течение ограниченного времени. Если вы не запрашивали подтверждение телефона, проигнорируйте это письмо.</p>
+
+<div class="booking-details">
+    <div class="detail-row">
+        <span><strong>Телефон:</strong></span>
+        <span>{{ user.profile.phone }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Код:</strong></span>
+        <span style="font-weight: bold; color: #38b000;">{{ verification_code }}</span>
+    </div>
+</div>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

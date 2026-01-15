@@ -1,0 +1,44 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Напоминание о бронировании (через 1 час){% endblock %}
+
+{% block email_header %}Скоро начало игры!{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p style="font-size: 18px; color: #38b000;"><strong>Через 1 час начинается ваша игра!</strong></p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ booking.date|date:"d.m.Y" }} (сегодня)</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время начала:</strong></span>
+        <span style="font-size: 20px; font-weight: bold; color: #38b000;">{{ booking.start_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Продолжительность:</strong></span>
+        <span>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+    </div>
+</div>
+
+<p>Рекомендации перед игрой:</p>
+<ul>
+    <li>Приходите за 10-15 минут до начала</li>
+    <li>Возьмите с собой воду</li>
+    <li>Проверьте прогноз погоды (если корт открытый)</li>
+    <li>Не забудьте ракетку и удобную спортивную форму</li>
+</ul>
+
+<p style="color: #6c757d; font-size: 14px;"><em>Обратите внимание: отмена бронирования доступна не менее чем за 1 час до начала. Сейчас отменить уже нельзя.</em></p>
+
+<p>Желаем вам отличной игры!</p>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

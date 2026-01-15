@@ -1,0 +1,42 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Добро пожаловать в Paddle Booking{% endblock %}
+
+{% block email_header %}Добро пожаловать!{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p>Спасибо за регистрацию в системе Paddle Booking!</p>
+
+<p>Ваша учетная запись успешно создана. Теперь вы можете:</p>
+<ul>
+    <li>Бронировать корты для игры в падел-теннис</li>
+    <li>Управлять своими бронированиями</li>
+    <li>Отслеживать свой игровой рейтинг</li>
+    <li>Записываться на тренировки с профессиональными тренерами</li>
+</ul>
+
+<div class="booking-details">
+    <h3>Ваши данные:</h3>
+    <div class="detail-row">
+        <span><strong>Имя:</strong></span>
+        <span>{{ user.first_name }} {{ user.last_name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Email:</strong></span>
+        <span>{{ user.email }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Телефон:</strong></span>
+        <span>{{ user.profile.phone }}</span>
+    </div>
+</div>
+
+<p>Для подтверждения телефона используйте код верификации, отправленный вам при регистрации.</p>
+
+<a href="{{ site_url }}" class="button">Перейти на сайт</a>
+
+<p>Если у вас возникнут вопросы, не стесняйтесь обращаться к нам!</p>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

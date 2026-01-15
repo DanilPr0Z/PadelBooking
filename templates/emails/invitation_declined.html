@@ -1,0 +1,40 @@
+{% extends 'emails/base_email.html' %}
+
+{% block email_title %}Приглашение отклонено{% endblock %}
+
+{% block email_header %}Приглашение отклонено{% endblock %}
+
+{% block email_content %}
+<h2>Здравствуйте, {{ user.first_name }}!</h2>
+<p><strong>{{ invitation.invitee.first_name }} {{ invitation.invitee.last_name }}</strong> отклонил(а) ваше приглашение присоединиться к бронированию.</p>
+
+<div class="booking-details">
+    <h3>Детали бронирования:</h3>
+    <div class="detail-row">
+        <span><strong>Корт:</strong></span>
+        <span>{{ invitation.booking.court.name }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Дата:</strong></span>
+        <span>{{ invitation.booking.date|date:"d.m.Y" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Время:</strong></span>
+        <span>{{ invitation.booking.start_time|time:"H:i" }} - {{ invitation.booking.end_time|time:"H:i" }}</span>
+    </div>
+    <div class="detail-row">
+        <span><strong>Свободных мест:</strong></span>
+        <span>{{ invitation.booking.available_slots }}</span>
+    </div>
+</div>
+
+<p>Не расстраивайтесь! Вы можете:</p>
+<ul>
+    <li>Пригласить другого друга</li>
+    <li>Включить опцию "Найти партнёра", чтобы другие игроки могли присоединиться</li>
+</ul>
+
+<a href="{{ site_url }}{% url 'booking_detail' invitation.booking.id %}" class="button">Управление бронированием</a>
+
+<p>С уважением,<br>Команда Paddle Booking</p>
+{% endblock %}

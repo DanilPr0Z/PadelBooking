@@ -1,56 +1,4 @@
-<nav class="navbar">
-    <div class="nav-container">
-        <div class="nav-brand">
-            <i class="fas fa-table-tennis-paddle-ball"></i>
-            <a href="{% url 'home' %}">Paddle Booking</a>
-        </div>
 
-        <div class="nav-menu">
-            <a href="{% url 'news' %}" class="nav-item {% if request.path == '/news/' %}active{% endif %}">Новости</a>
-            <a href="{% url 'booking' %}" class="nav-item {% if request.path == '/booking/' %}active{% endif %}">Бронирование</a>
-            <a href="{% url 'tournaments' %}" class="nav-item {% if request.path == '/tournaments/' %}active{% endif %}">Турниры</a>
-        </div>
-
-        <div class="nav-auth">
-            {% if user.is_authenticated %}
-                <div class="user-dropdown">
-                    <button class="user-btn">
-                        <i class="fas fa-user"></i>
-                        {{ user.username }}
-                    </button>
-                    <div class="dropdown-content">
-                        <a href="{% url 'profile' %}" id="profile-link"><i class="fas fa-user"></i> Профиль</a>
-                        <a href="{% url 'profile' %}#bookings" id="bookings-link"><i class="fas fa-calendar"></i> Мои записи</a>
-                        <a href="{% url 'profile' %}#rating" id="rating-link"><i class="fas fa-chart-line"></i> Мой рейтинг</a>
-                        <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
-                    </div>
-                </div>
-            {% else %}
-                <!-- Изменено: вместо ссылок на страницы - кнопки для модальных окон -->
-                <button class="auth-btn login-btn" id="openLoginModal">Войти</button>
-                <button class="auth-btn register-btn" id="openRegisterModal">Зарегистрироваться</button>
-            {% endif %}
-        </div>
-    </div>
-</nav>
-
-<!-- Модальное окно выхода -->
-<div id="logoutModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <div class="logout-confirmation">
-            <i class="fas fa-sign-out-alt"></i>
-            <h2>Выйти из аккаунта</h2>
-            <p>Вы уверены, что хотите выйти из своего аккаунта?</p>
-            <div class="logout-buttons">
-                <button type="button" class="btn-secondary" id="cancelLogout">Отмена</button>
-                <button type="button" class="btn-danger" id="confirmLogout">Выйти</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Обработчики для навигации по профилю
     const profileLink = document.getElementById('profile-link');
@@ -131,6 +79,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ========== ОТКРЫТИЕ МОДАЛЬНЫХ ОКОН ВХОДА/РЕГИСТРАЦИИ ==========
-    // Обработчики определены в main.js, здесь ничего делать не нужно
+    // (если они есть на странице)
+    const openLoginModalBtn = document.getElementById('openLoginModal');
+    const openRegisterModalBtn = document.getElementById('openRegisterModal');
+
+    if (openLoginModalBtn) {
+        openLoginModalBtn.addEventListener('click', function() {
+            // Проверяем, есть ли глобальная функция для открытия модального окна входа
+            if (typeof window.openLoginModal === 'function') {
+                window.openLoginModal();
+            }
+        });
+    }
+
+    if (openRegisterModalBtn) {
+        openRegisterModalBtn.addEventListener('click', function() {
+            // Проверяем, есть ли глобальная функция для открытия модального окна регистрации
+            if (typeof window.openRegisterModal === 'function') {
+                window.openRegisterModal();
+            }
+        });
+    }
 });
-</script>
