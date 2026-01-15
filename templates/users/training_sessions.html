@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои тренировки - Paddle Booking{% endblock %}
+
+{% block content %}
+<div class="training-sessions-container">
+    <div class="sessions-header">
+        <h1>Мои тренировки</h1>
+        <a href="{% url 'coaches_list' %}" class="btn-primary">
+            <i class="fas fa-user-plus"></i> Найти тренера
+        </a>
+    </div>
+
+    {% if sessions %}
+        <div class="sessions-grid">
+            {% for session in sessions %}
+            <div class="session-card session-{{ session.status }}">
+                <div class="session-header">
+                    <div class="session-status-badge">
+                        <span class="badge badge-{{ session.status }}">
+                            {{ session.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="session-date-info">
+                        <i class="fas fa-calendar"></i>
+                        {{ session.date|date:"d.m.Y" }}
+                    </div>
+                </div>
+
+                <div class="session-body">
+                    <div class="coach-info-mini">
+                        <div class="coach-avatar-small">
+                            {% if session.coach.profile.avatar %}
+                                <img src="{{ session.coach.profile.avatar.url }}" alt="{{ session.coach.get_full_name }}">
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3>Тренер: {{ session.coach.first_name }} {{ session.coach.last_name }}</h3>
+                            <p class="coach-label">{{ session.coach.coach_profile.specialization|default:"Тренер по падл-теннису" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="session-details">
+                        <div class="detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</span>
+                        </div>
+
+                        {% if session.court %}
+                        <div class="detail-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ session.court.name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if session.notes %}
+                    <div class="session-notes">
+                        <h4><i class="fas fa-sticky-note"></i> Заметки тренера</h4>
+                        <p>{{ session.notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if session.status == 'completed' and session.player_feedback %}
+                    <div class="session-feedback">
+                        <h4><i class="fas fa-comment"></i> Ваш отзыв</h4>
+                        <p>{{ session.player_feedback }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="session-footer">
+                    {% if session.status == 'scheduled' %}
+                        <button class="btn-danger btn-sm" onclick="cancelSession({{ session.id }})">
+                            <i class="fas fa-times"></i> Отменить
+                        </button>
+                    {% elif session.status == 'completed' and not session.player_feedback %}
+                        <button class="btn-primary btn-sm" onclick="leaveFeedback({{ session.id }})">
+                            <i class="fas fa-comment"></i> Оставить отзыв
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-sessions">
+            <i class="fas fa-calendar-times"></i>
+            <h2>У вас пока нет тренировок</h2>
+            <p>Найдите подходящего тренера и запишитесь на занятие</p>
+            <a href="{% url 'coaches_list' %}" class="btn-primary">
+                <i class="fas fa-search"></i> Найти тренера
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.training-sessions-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.sessions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.sessions-header h1 {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+}
+
+.sessions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.session-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.session-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.session-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.session-scheduled .session-header {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+}
+
+.session-completed .session-header {
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+}
+
+.session-cancelled .session-header {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.session-in_progress .session-header {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+.session-status-badge .badge {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.session-date-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.session-body {
+    padding: 20px;
+}
+
+.coach-info-mini {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.coach-avatar-small {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.coach-avatar-small img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.coach-info-mini h3 {
+    color: var(--secondary-color);
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.coach-label {
+    color: #666;
+    font-size: 0.85rem;
+    margin: 4px 0 0 0;
+}
+
+.session-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #666;
+}
+
+.detail-item i {
+    color: var(--primary-color);
+    width: 20px;
+}
+
+.session-notes,
+.session-feedback {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.session-notes h4,
+.session-feedback h4 {
+    color: var(--secondary-color);
+    margin: 0 0 8px 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.session-notes p,
+.session-feedback p {
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.session-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.no-sessions {
+    text-align: center;
+    padding: 80px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-sessions i {
+    font-size: 5rem;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+.no-sessions h2 {
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+}
+
+.no-sessions p {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .sessions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sessions-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .sessions-header h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+
+<script>
+function cancelSession(sessionId) {
+    if (confirm('Вы уверены, что хотите отменить тренировку?')) {
+        alert('Функция отмены тренировки будет добавлена позже');
+    }
+}
+
+function leaveFeedback(sessionId) {
+    const feedback = prompt('Оставьте отзыв о тренировке:');
+    if (feedback) {
+        alert('Функция добавления отзыва будет реализована позже');
+    }
+}
+</script>
+{% endblock %}

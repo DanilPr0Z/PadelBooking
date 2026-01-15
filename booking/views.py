@@ -400,6 +400,11 @@ def create_booking(request):
                     messages.error(request, error_html)
                     return redirect('booking')
 
+            # 7. Получаем данные для поиска партнеров
+            looking_for_partner = request.POST.get('looking_for_partner') == 'on'
+            max_players = int(request.POST.get('max_players', 4))
+            required_rating_level = request.POST.get('required_rating_level', '')
+
             # 7. Создаем бронирование
             booking = Booking.objects.create(
                 user=request.user,
@@ -407,7 +412,10 @@ def create_booking(request):
                 date=booking_date,
                 start_time=start_time,
                 end_time=end_time,
-                status='pending'
+                status='pending',
+                looking_for_partner=looking_for_partner,
+                max_players=max_players,
+                required_rating_level=required_rating_level if required_rating_level else None
             )
 
         # 8. Очищаем кэш слотов

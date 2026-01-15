@@ -30,3 +30,4 @@ class BookingInvitationAdmin(admin.ModelAdmin):
     search_fields = ['inviter__username', 'inviter__first_name', 'inviter__last_name', 'invitee__username', 'invitee__first_name', 'invitee__last_name', 'invitee_phone']
 
     readonly_fields = ['created_at', 'responded_at']
+

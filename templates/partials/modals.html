@@ -8,16 +8,16 @@
             {% csrf_token %}
 
             <div class="form-group">
-                <label for="loginIdentifier">Имя пользователя или телефон</label>
+                <label for="loginIdentifier">Email или телефон</label>
                 <input type="text" id="loginIdentifier" name="identifier" required
-                       placeholder="Введите имя пользователя или номер телефона">
-                <small class="help-text">Можно ввести имя пользователя или номер телефона (+7...)</small>
+                       placeholder="Введите email или номер телефона" class="form-input">
+                <small class="help-text">Можно ввести email или номер телефона (+7...)</small>
             </div>
 
             <div class="form-group">
                 <label for="loginPassword">Пароль</label>
                 <input type="password" id="loginPassword" name="password" required
-                       placeholder="Введите пароль">
+                       placeholder="Введите пароль" class="form-input">
             </div>
 
             <button type="submit" class="btn-primary">Войти</button>
@@ -39,30 +39,43 @@
             {% csrf_token %}
 
             <div class="form-group">
-                <label for="regUsername">Имя пользователя *</label>
-                <input type="text" id="regUsername" name="username" required minlength="3" maxlength="30"
-                       placeholder="Придумайте имя пользователя">
-                <small>От 3 до 30 символов. Только буквы, цифры и @/./+/-/_</small>
+                <label for="regFirstName">Имя *</label>
+                <input type="text" id="regFirstName" name="first_name" required
+                       placeholder="Введите ваше имя" class="form-input">
+                <small>Минимум 2 символа</small>
+            </div>
+
+            <div class="form-group">
+                <label for="regLastName">Фамилия *</label>
+                <input type="text" id="regLastName" name="last_name" required
+                       placeholder="Введите вашу фамилию" class="form-input">
+                <small>Минимум 2 символа</small>
+            </div>
+
+            <div class="form-group">
+                <label for="regEmail">Email *</label>
+                <input type="email" id="regEmail" name="email" required
+                       placeholder="example@email.com" class="form-input">
             </div>
 
             <div class="form-group">
                 <label for="regPhone">Номер телефона *</label>
                 <input type="tel" id="regPhone" name="phone" required
-                       placeholder="+7 (999) 123-45-67">
+                       placeholder="+7 (999) 123-45-67" class="form-input">
                 <small>Введите российский номер телефона (11 цифр, начинается с +7)</small>
             </div>
 
             <div class="form-group">
                 <label for="regPassword1">Пароль *</label>
                 <input type="password" id="regPassword1" name="password1" required minlength="8"
-                       placeholder="Придумайте пароль">
+                       placeholder="Придумайте пароль" class="form-input">
                 <small>Минимум 8 символов</small>
             </div>
 
             <div class="form-group">
                 <label for="regPassword2">Подтверждение пароля *</label>
                 <input type="password" id="regPassword2" name="password2" required
-                       placeholder="Повторите пароль">
+                       placeholder="Повторите пароль" class="form-input">
             </div>
 
             <button type="submit" class="btn-primary">Зарегистрироваться</button>

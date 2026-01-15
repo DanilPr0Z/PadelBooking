@@ -206,6 +206,44 @@
             <input type="hidden" name="end_time" id="form-end-time">
             <input type="hidden" name="duration" id="form-duration" value="1">
 
+            <div class="partner-options" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 15px;">
+                    <input type="checkbox" name="looking_for_partner" id="looking-for-partner" style="width: 20px; height: 20px;">
+                    <span style="font-weight: 600; color: var(--secondary-color);">
+                        <i class="fas fa-user-friends"></i> Ищу партнеров для игры
+                    </span>
+                </label>
+
+                <div id="partner-fields" style="display: none; margin-top: 15px; padding-left: 30px;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 5px; color: #666;">Максимум игроков:</label>
+                        <select name="max_players" id="max-players" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="2">2 игрока</option>
+                            <option value="3">3 игрока</option>
+                            <option value="4" selected>4 игрока</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 5px; color: #666;">Требуемый уровень (опционально):</label>
+                        <select name="required_rating_level" id="required-rating" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="">Любой уровень</option>
+                            <option value="D">D - Новичок</option>
+                            <option value="D+">D+ - Начинающий</option>
+                            <option value="C-">C- - Начинающий / Слабый средний</option>
+                            <option value="C">C - Средний</option>
+                            <option value="C+">C+ - Средний / Крепкий любитель</option>
+                            <option value="B-">B- - Крепкий любитель</option>
+                            <option value="B">B - Продвинутый</option>
+                            <option value="B+">B+ - Топ-любитель</option>
+                            <option value="A">A - Кандидат/Мастер спорта</option>
+                            <option value="PRO">PRO - Профессионал</option>
+                        </select>
+                        <small style="color: #666; font-size: 0.85rem;">К вам смогут присоединиться только игроки указанного уровня</small>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-actions">
                 <button type="button" class="btn-secondary cancel-booking">Отмена</button>
                 <button type="submit" class="btn-primary confirm-booking">Подтвердить бронирование</button>
@@ -704,6 +742,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Запускаем после загрузки страницы
     setTimeout(setupSectionHandlers, 100);
+
+    // ========== УПРАВЛЕНИЕ ПОЛЯМИ "ИЩУ ПАРТНЕРА" ==========
+    const lookingForPartnerCheckbox = document.getElementById('looking-for-partner');
+    const partnerFields = document.getElementById('partner-fields');
+
+    if (lookingForPartnerCheckbox && partnerFields) {
+        lookingForPartnerCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                partnerFields.style.display = 'block';
+            } else {
+                partnerFields.style.display = 'none';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

@@ -1155,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
 
             const formData = new FormData(emailVerificationForm);
-            const code = formData.get('verification_code');
+            const code = formData.get('email_verification_code');
 
             if (!code || code.trim() === '') {
                 showEmailVerificationMessage('Введите код подтверждения', 'error');
@@ -1175,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCsrfToken(),
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `verification_code=${encodeURIComponent(code)}`
+                body: `email_verification_code=${encodeURIComponent(code)}`
             })
             .then(response => response.json())
             .then(data => {

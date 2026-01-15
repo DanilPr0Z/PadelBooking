@@ -8,6 +8,8 @@
         <div class="nav-menu">
             <a href="{% url 'news' %}" class="nav-item {% if request.path == '/news/' %}active{% endif %}">Новости</a>
             <a href="{% url 'booking' %}" class="nav-item {% if request.path == '/booking/' %}active{% endif %}">Бронирование</a>
+            <a href="{% url 'find_partners' %}" class="nav-item {% if request.path == '/booking/find-partners/' %}active{% endif %}">Найти напарника</a>
+            <a href="{% url 'coaches_list' %}" class="nav-item {% if '/users/coaches/' in request.path %}active{% endif %}">Тренеры</a>
             <a href="{% url 'tournaments' %}" class="nav-item {% if request.path == '/tournaments/' %}active{% endif %}">Турниры</a>
         </div>
 
@@ -21,6 +23,7 @@
                     <div class="dropdown-content">
                         <a href="{% url 'profile' %}" id="profile-link"><i class="fas fa-user"></i> Профиль</a>
                         <a href="{% url 'profile' %}#bookings" id="bookings-link"><i class="fas fa-calendar"></i> Мои записи</a>
+                        <a href="{% url 'training_sessions' %}"><i class="fas fa-dumbbell"></i> Мои тренировки</a>
                         <a href="{% url 'profile' %}#rating" id="rating-link"><i class="fas fa-chart-line"></i> Мой рейтинг</a>
                         <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
                     </div>
@@ -79,6 +82,74 @@ document.addEventListener('DOMContentLoaded', function() {
         ratingLink.addEventListener('click', function(e) {
             e.preventDefault(); // Предотвращаем стандартный переход
             window.location.href = "{% url 'profile' %}#rating";
+        });
+    }
+
+    // ========== УПРАВЛЕНИЕ ВЫПАДАЮЩИМ МЕНЮ ПОЛЬЗОВАТЕЛЯ ==========
+    const userDropdown = document.querySelector('.user-dropdown');
+    const userBtn = document.querySelector('.user-btn');
+    const dropdownContent = document.querySelector('.dropdown-content');
+
+    if (userBtn && dropdownContent) {
+        // Создаем backdrop для мобильных устройств
+        const backdrop = document.createElement('div');
+        backdrop.className = 'dropdown-backdrop';
+        document.body.appendChild(backdrop);
+
+        // Переключение меню по клику на кнопку
+        userBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = dropdownContent.classList.contains('show');
+
+            if (isOpen) {
+                closeDropdown();
+            } else {
+                openDropdown();
+            }
+        });
+
+        // Функция открытия меню
+        function openDropdown() {
+            dropdownContent.classList.add('show');
+            userBtn.classList.add('active');
+            backdrop.classList.add('show');
+
+            // Предотвращаем скролл на мобильных когда меню открыто
+            if (window.innerWidth <= 768) {
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // Функция закрытия меню
+        function closeDropdown() {
+            dropdownContent.classList.remove('show');
+            userBtn.classList.remove('active');
+            backdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // Закрытие при клике вне меню
+        document.addEventListener('click', function(e) {
+            if (!userDropdown.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        // Закрытие при клике на backdrop
+        backdrop.addEventListener('click', closeDropdown);
+
+        // Закрытие при нажатии Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && dropdownContent.classList.contains('show')) {
+                closeDropdown();
+            }
+        });
+
+        // Закрытие меню при клике на любую ссылку внутри
+        dropdownContent.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                closeDropdown();
+            });
         });
     }
 

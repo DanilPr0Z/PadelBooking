@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
 
         <div class="profile-header-info">
-            <h2>{{ user.username }}</h2>
+            <h2>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
             {% if user.email %}
                 <p id="emailDisplay">{{ user.email }}</p>
             {% else %}
@@ -147,14 +147,19 @@ document.addEventListener('DOMContentLoaded', function() {
             <h2>Личные данные</h2>
             <div class="profile-info">
                 <div class="info-item">
-                    <label>Имя пользователя:</label>
-                    <span>{{ user.username }}</span>
+                    <label>Фамилия и Имя:</label>
+                    <span>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</span>
                 </div>
                 <div class="info-item email-item">
                     <label>Email:</label>
                     <div class="email-container">
                         {% if user.email %}
                             <span id="emailValue" class="email-value">{{ user.email }}</span>
+                            {% if user.profile.email_verified %}
+                                <span class="verified-tag"><i class="fas fa-check"></i> Подтвержден</span>
+                            {% else %}
+                                <span class="unverified-tag"><i class="fas fa-exclamation-triangle"></i> Не подтвержден</span>
+                            {% endif %}
                             <button id="editEmailBtn" class="edit-btn" title="Изменить email">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -231,6 +236,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="verificationMessage" class="verification-message" style="display: none;"></div>
             </div>
             {% endif %}
+
+            {% if user.email and user.profile and not user.profile.email_verified %}
+            <div class="email-verification">
+                <h3>Подтверждение Email</h3>
+                <p>Ваш email {{ user.email }} не подтвержден. Подтвердите email для получения важных уведомлений.</p>
+
+                <form id="emailVerificationForm" method="post" class="verification-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="email_verification_code">Код подтверждения</label>
+                        <input type="text" id="email_verification_code" name="email_verification_code"
+                               placeholder="Введите код из письма" maxlength="6" required>
+                    </div>
+                    <div class="verification-actions">
+                        <button type="submit" class="btn-primary">Подтвердить Email</button>
+                        <button type="button" class="btn-secondary" id="resendEmailCode">Отправить код повторно</button>
+                    </div>
+                </form>
+
+                <div id="emailVerificationMessage" class="verification-message" style="display: none;"></div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Вкладка "Мои записи" -->
@@ -284,7 +311,32 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="booking-detail">
                                     <i class="fas fa-money-bill-wave"></i>
                                     <span>{{ booking.total_price }} ₽</span>
+                                    {% if booking.price_per_person %}
+                                    <span style="font-size: 0.9em; color: #666;"> ({{ booking.price_per_person }} ₽/чел.)</span>
+                                    {% endif %}
                                 </div>
+                                {% if booking.coach %}
+                                <div class="booking-detail">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <span>Тренер: {% if booking.coach.first_name or booking.coach.last_name %}{{ booking.coach.first_name }} {{ booking.coach.last_name }}{% else %}{{ booking.coach.username }}{% endif %}</span>
+                                </div>
+                                {% endif %}
+                                {% if booking.partners.exists %}
+                                <div class="booking-detail">
+                                    <i class="fas fa-user-friends"></i>
+                                    <span>Партнёры:
+                                        {% for partner in booking.partners.all %}
+                                            {% if partner.first_name or partner.last_name %}{{ partner.first_name }} {{ partner.last_name }}{% else %}{{ partner.username }}{% endif %}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                {% if booking.looking_for_partner %}
+                                <div class="booking-detail">
+                                    <i class="fas fa-search"></i>
+                                    <span style="color: #ff6b6b;">Ищет партнёра</span>
+                                </div>
+                                {% endif %}
                                 {% if booking.status == 'pending' %}
                                 <div class="booking-detail">
                                     <i class="fas fa-hourglass-half"></i>
@@ -352,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h3>{{ rating.get_level_display_full }}</h3>
                             <p>Последнее обновление: {{ rating.updated_at|date:"d.m.Y H:i"|default:"еще не обновлялся" }}</p>
                             {% if rating.updated_by %}
-                                <p class="coach-updated">Обновил: {{ rating.updated_by.username }}</p>
+                                <p class="coach-updated">Обновил: {% if rating.updated_by.first_name or rating.updated_by.last_name %}{{ rating.updated_by.first_name }} {{ rating.updated_by.last_name }}{% else %}{{ rating.updated_by.username }}{% endif %}</p>
                             {% endif %}
                         </div>
                     </div>
@@ -1197,6 +1249,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .phone-verification p {
     color: #856404;
+    margin-bottom: 18px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.email-verification {
+    margin-top: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 10px;
+    border: 2px solid rgba(33, 150, 243, 0.3);
+}
+
+.email-verification h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #1565c0;
+    font-size: 1.3rem;
+}
+
+.email-verification p {
+    color: #1565c0;
     margin-bottom: 18px;
     font-size: 0.95rem;
     line-height: 1.5;

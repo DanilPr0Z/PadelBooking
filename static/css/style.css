@@ -116,45 +116,148 @@ body {
 }
 
 .user-btn {
-    background: none;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #667eea 100%);
     border: none;
     cursor: pointer;
-    padding: 8px 20px;
+    padding: 10px 20px;
     border-radius: 25px;
-    background-color: var(--primary-light);
-    color: var(--dark-color);
-    font-weight: 500;
+    color: white;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    font-size: 15px;
+}
+
+.user-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.user-btn i {
+    font-size: 16px;
 }
 
 .dropdown-content {
     display: none;
     position: absolute;
     background-color: white;
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    border-radius: 8px;
-    z-index: 1;
+    min-width: 220px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    z-index: 1000;
     right: 0;
-    margin-top: 5px;
+    margin-top: 8px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-content.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    animation: dropdownSlideIn 0.3s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .dropdown-content a {
     color: var(--dark-color);
-    padding: 12px 16px;
+    padding: 14px 18px;
     text-decoration: none;
-    display: block;
-    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
+
+.dropdown-content a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-content a i {
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 16px;
+    transition: transform 0.2s ease;
 }
 
 .dropdown-content a:hover {
-    background-color: var(--primary-light);
+    background: linear-gradient(90deg, var(--primary-light) 0%, #f8f9fa 100%);
+    padding-left: 22px;
 }
 
-.user-dropdown:hover .dropdown-content {
-    display: block;
+.dropdown-content a:hover i {
+    transform: scale(1.15);
+}
+
+/* Стрелка выпадающего меню */
+.user-btn::after {
+    content: '\f107';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-left: 5px;
+    transition: transform 0.3s ease;
+    font-size: 12px;
+}
+
+.user-btn.active::after {
+    transform: rotate(180deg);
+}
+
+/* Анимация пульсации для активного состояния */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(0, 123, 255, 0.5);
+    }
+    100% {
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    }
+}
+
+.user-btn.active {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Эффект для выбранного пункта меню */
+.dropdown-content a.current-page {
+    background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
+    border-left: 4px solid var(--primary-color);
+    padding-left: 14px;
+    font-weight: 600;
+}
+
+/* Счетчик непрочитанных (для будущих уведомлений) */
+.dropdown-content a .badge {
+    margin-left: auto;
+    background: #ff4444;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* Субнавбар */
@@ -450,9 +553,78 @@ footer {
         grid-template-columns: 1fr;
     }
 
+    .user-dropdown {
+        width: 100%;
+    }
+
+    .user-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+    }
+
     .dropdown-content {
-        position: static;
-        margin-top: 10px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: 0;
+        margin: 0;
+        min-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+        overflow-y: auto;
+        animation: slideUpMobile 0.3s ease-out;
+    }
+
+    /* Ручка для свайпа на мобильных */
+    .dropdown-content::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: #ddd;
+        border-radius: 2px;
+        margin: 12px auto 8px;
+    }
+
+    .dropdown-content.show {
+        transform: translateY(0);
+    }
+
+    @keyframes slideUpMobile {
+        from {
+            opacity: 0;
+            transform: translateY(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .dropdown-content a {
+        padding: 16px 20px;
+        font-size: 16px;
+    }
+
+    /* Добавляем затемнение фона на мобильных */
+    .dropdown-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .dropdown-backdrop.show {
+        display: block;
+        opacity: 1;
     }
 }
 

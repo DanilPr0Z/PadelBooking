@@ -207,6 +207,32 @@ class UserProfile(models.Model):
         print(f"  ❌ НЕВЕРНЫЙ КОД!")
         return False
 
+    def generate_email_verification_code(self):
+        """Генерация кода подтверждения email"""
+        import random
+        self.email_verification_code = f"{random.randint(100000, 999999)}"
+        self.save()
+        print(
+            f"ГЕНЕРАЦИЯ КОДА EMAIL: Для пользователя {self.user.username}, email {self.user.email}, код: {self.email_verification_code}")
+        return self.email_verification_code
+
+    def verify_email(self, code):
+        """Подтверждение email"""
+        print(f"ПРОВЕРКА КОДА EMAIL ДЛЯ {self.user.username}:")
+        print(f"  Введенный код: {code}")
+        print(f"  Код в БД: {self.email_verification_code}")
+        print(f"  Совпадение: {str(self.email_verification_code) == str(code)}")
+
+        if self.email_verification_code and str(self.email_verification_code) == str(code):
+            self.email_verified = True
+            self.email_verification_code = None
+            self.save()
+            print(f"  ✅ EMAIL ПОДТВЕРЖДЕН!")
+            return True
+
+        print(f"  ❌ НЕВЕРНЫЙ КОД!")
+        return False
+
     def save_avatar(self, image_file):
         """Сохранение аватарки с обработкой"""
         try:

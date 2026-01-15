@@ -301,6 +301,88 @@ def resend_verification_code(request):
 @require_POST
 @csrf_exempt
 @login_required
+def verify_email(request):
+    """AJAX подтверждение email"""
+    try:
+        code = request.POST.get('email_verification_code', '').strip()
+
+        if not code:
+            return JsonResponse({
+                'success': False,
+                'message': 'Введите код подтверждения'
+            })
+
+        if not hasattr(request.user, 'profile'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Профиль пользователя не найден'
+            })
+
+        # Используем метод модели для подтверждения
+        if request.user.profile.verify_email(code):
+            return JsonResponse({
+                'success': True,
+                'message': 'Email успешно подтвержден!',
+                'email_verified': True
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Неверный код подтверждения'
+            })
+
+    except Exception as e:
+        print(f"Ошибка при подтверждении email: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': f'Ошибка сервера: {str(e)}'
+        }, status=500)
+
+
+@require_POST
+@csrf_exempt
+@login_required
+def resend_email_verification_code(request):
+    """AJAX повторная отправка кода подтверждения email"""
+    try:
+        if not hasattr(request.user, 'profile'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Профиль пользователя не найден'
+            })
+
+        if not request.user.email:
+            return JsonResponse({
+                'success': False,
+                'message': 'Email не указан'
+            })
+
+        # Генерируем новый код через метод модели
+        code = request.user.profile.generate_email_verification_code()
+
+        # В реальном приложении здесь был бы код отправки email
+        # Для тестирования код уже залогирован в методе модели
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Код подтверждения отправлен на {request.user.email}'
+        })
+
+    except Exception as e:
+        print(f"Ошибка при отправке кода email: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': f'Ошибка сервера: {str(e)}'
+        }, status=500)
+
+
+@require_POST
+@csrf_exempt
+@login_required
 def upload_avatar(request):
     """AJAX загрузка аватарки"""
     try:
@@ -593,6 +675,189 @@ def rating_detail(request):
     }
 
     return render(request, 'users/rating_detail.html', context)
+
+
+# ==================== СИСТЕМА ТРЕНЕРОВ ====================
+
+@login_required
+def coaches_list(request):
+    """Список всех тренеров"""
+    from .models import CoachProfile
+
+    coaches = CoachProfile.objects.filter(
+        is_active=True
+    ).select_related('user').order_by('-coach_rating')
+
+    context = {
+        'coaches': coaches
+    }
+
+    return render(request, 'users/coaches_list.html', context)
+
+
+@login_required
+def coach_detail(request, coach_id):
+    """Детальная информация о тренере"""
+    from .models import CoachProfile, TrainingSession
+    from django.shortcuts import get_object_or_404
+
+    coach_profile = get_object_or_404(CoachProfile, id=coach_id, is_active=True)
+
+    # Получаем прошлые сессии тренера для статистики
+    completed_sessions = TrainingSession.objects.filter(
+        coach=coach_profile.user,
+        status='completed'
+    ).count()
+
+    # Получаем будущие сессии (для отображения занятости)
+    upcoming_sessions = TrainingSession.objects.filter(
+        coach=coach_profile.user,
+        status__in=['scheduled', 'in_progress'],
+        date__gte=timezone.now().date()
+    ).order_by('date', 'start_time')
+
+    context = {
+        'coach': coach_profile,
+        'completed_sessions': completed_sessions,
+        'upcoming_sessions': upcoming_sessions
+    }
+
+    return render(request, 'users/coach_detail.html', context)
+
+
+@login_required
+def my_training_sessions(request):
+    """Список тренировок пользователя"""
+    from .models import TrainingSession
+
+    # Получаем все сессии пользователя
+    sessions = TrainingSession.objects.filter(
+        player=request.user
+    ).select_related('coach', 'court').order_by('-date', '-start_time')
+
+    context = {
+        'sessions': sessions
+    }
+
+    return render(request, 'users/training_sessions.html', context)
+
+
+# ==================== СИСТЕМА УВЕДОМЛЕНИЙ ====================
+
+@login_required
+def notifications_list(request):
+    """Список уведомлений пользователя"""
+    from .models import Notification
+
+    # Получаем все уведомления пользователя
+    notifications = Notification.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
+
+    # Разделяем на непрочитанные и прочитанные
+    unread_notifications = notifications.filter(is_read=False)
+    read_notifications = notifications.filter(is_read=True)[:20]  # Последние 20 прочитанных
+
+    context = {
+        'unread_notifications': unread_notifications,
+        'read_notifications': read_notifications,
+        'unread_count': unread_notifications.count()
+    }
+
+    return render(request, 'users/notifications.html', context)
+
+
+@require_POST
+@csrf_exempt
+@login_required
+def mark_notification_read(request):
+    """AJAX пометить уведомление как прочитанное"""
+    try:
+        from .models import Notification
+
+        notification_id = request.POST.get('notification_id')
+
+        if not notification_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID уведомления не указан'
+            })
+
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                user=request.user
+            )
+            notification.mark_as_read()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Уведомление отмечено как прочитанное'
+            })
+
+        except Notification.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Уведомление не найдено'
+            })
+
+    except Exception as e:
+        print(f"Ошибка при отметке уведомления: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Ошибка сервера: {str(e)}'
+        }, status=500)
+
+
+@require_POST
+@csrf_exempt
+@login_required
+def mark_all_notifications_read(request):
+    """AJAX пометить все уведомления как прочитанные"""
+    try:
+        from .models import Notification
+
+        # Отмечаем все непрочитанные уведомления пользователя
+        unread_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Отмечено как прочитанные: {unread_count}',
+            'marked_count': unread_count
+        })
+
+    except Exception as e:
+        print(f"Ошибка при отметке всех уведомлений: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Ошибка сервера: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def get_unread_notifications_count(request):
+    """AJAX получить количество непрочитанных уведомлений"""
+    try:
+        from .models import Notification
+
+        count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count()
+
+        return JsonResponse({
+            'success': True,
+            'count': count
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Ошибка: {str(e)}'
+        }, status=500)
 
 
 @login_required
