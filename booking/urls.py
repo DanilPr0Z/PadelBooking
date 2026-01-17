@@ -14,4 +14,13 @@ urlpatterns = [
     path('join/<int:booking_id>/', views.join_booking, name='join_booking'),
     path('invite/<int:booking_id>/', views.send_invitation, name='send_invitation'),
     path('my-invitations/', views.my_invitations, name='my_invitations'),
+
+    # Статистика игрока
+    path('statistics/', views.player_statistics, name='player_statistics'),
+
+    # API endpoints
+    path('api/stats/', views.api_player_stats, name='api_player_stats'),
+    path('api/calendar-events/', views.api_calendar_events, name='api_calendar_events'),
+    path('api/available-slots/', views.api_available_slots, name='api_available_slots'),
+    path('api/coaches/', views.get_coaches_list, name='api_coaches_list'),
 ]

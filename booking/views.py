@@ -5,12 +5,21 @@ from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
 from django.contrib import messages
 from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from datetime import datetime, timedelta
 from django.urls import reverse
 from django.db.models import Q
 from .models import Court, Booking
+from users.analytics import (
+    get_player_stats,
+    get_calendar_events,
+    get_available_slots as get_available_slots_analytics
+)
 import traceback
+
+# Импортируем profile из users.views для обратной совместимости
+from users.views import profile
 
 
 import logging
@@ -18,6 +27,20 @@ logger = logging.getLogger(__name__)
 
 
 from django.utils.html import escape
+from .utils import (
+    create_error_message,
+    create_success_message,
+    validate_booking_times,
+    validate_booking_duration,
+    validate_working_hours,
+    check_time_conflicts,
+    pluralize_hours
+)
+from .decorators import (
+    api_data_ratelimit,
+    api_write_ratelimit,
+    auth_ratelimit
+)
 
 def booking_page(request):
     """Страница бронирования кортов"""
@@ -30,12 +53,13 @@ def booking_page(request):
 
 
 @require_GET
+@api_data_ratelimit(rate='60/m')
 def get_available_slots(request):
     court_id = request.GET.get('court')
     date_str = request.GET.get('date')
 
-    print(f"🔍 DEBUG: get_available_slots called with court={court_id}, date={date_str}")
-    print(f"🔍 DEBUG: Current time: {timezone.now().time()}")
+    logger.debug(f"get_available_slots called with court={court_id}, date={date_str}")
+    logger.debug(f"Current time: {timezone.now().time()}")
 
     if not court_id or not date_str:
         return JsonResponse({
@@ -46,7 +70,7 @@ def get_available_slots(request):
     try:
         court = Court.objects.filter(id=court_id, is_available=True).first()
         if not court:
-            print(f"❌ DEBUG: Court not found or not available: {court_id}")
+            logger.warning(f"Court not found or not available: {court_id}")
             return JsonResponse({
                 'success': False,
                 'message': 'Корт не найден или недоступен'
@@ -56,11 +80,10 @@ def get_available_slots(request):
         today = timezone.now().date()
         current_time = timezone.now().time()
 
-        print(f"🔍 DEBUG: booking_date={booking_date}, today={today}")
-        print(f"🔍 DEBUG: current_time={current_time}")
+        logger.debug(f"booking_date={booking_date}, today={today}, current_time={current_time}")
 
         if booking_date < today:
-            print(f"❌ DEBUG: Booking date is in the past: {booking_date}")
+            logger.warning(f"Booking date is in the past: {booking_date}")
             return JsonResponse({
                 'success': False,
                 'message': 'Нельзя бронировать корт на прошедшую дату'
@@ -73,7 +96,7 @@ def get_available_slots(request):
             status__in=['pending', 'confirmed']
         ).select_related('user', 'user__profile', 'user__rating').prefetch_related('partners')
 
-        print(f"🔍 DEBUG: Found {existing_bookings.count()} existing bookings")
+        logger.debug(f"Found {existing_bookings.count()} existing bookings for court {court.name} on {booking_date}")
 
         # Словарь занятых часов
         booked_hours = {}
@@ -82,7 +105,7 @@ def get_available_slots(request):
             end_hour = booking.end_time.hour
             for hour in range(start_hour, end_hour):
                 booked_hours[hour] = True
-            print(f"🔍 DEBUG: Booking from {start_hour}:00 to {end_hour}:00")
+            logger.debug(f"Booking slot: {start_hour}:00-{end_hour}:00")
 
         # Рабочие часы: 8:00 - 22:00
         WORKING_HOURS_START = 8
@@ -94,10 +117,10 @@ def get_available_slots(request):
         # Только если сегодняшняя дата
         if booking_date == today:
             current_hour = current_time.hour
-            print(f"🔍 DEBUG: Today! Current hour: {current_hour}")
+            logger.debug(f"Booking for today - current hour: {current_hour}")
         else:
             current_hour = -1  # Будущая дата, все часы доступны
-            print(f"🔍 DEBUG: Future date! All hours available")
+            logger.debug(f"Booking for future date - all hours available")
 
         for hour in range(WORKING_HOURS_START, WORKING_HOURS_END):
             is_available = hour not in booked_hours
@@ -121,7 +144,7 @@ def get_available_slots(request):
         if request.user.is_authenticated:
             try:
                 user_rating = request.user.rating.level
-            except:
+            except (AttributeError, ObjectDoesNotExist):
                 user_rating = None
 
         # Ищем бронирования с "Найти партнёра"
@@ -167,7 +190,7 @@ def get_available_slots(request):
         # Сортируем по времени начала
         all_items.sort(key=lambda x: x['hour'])
 
-        print(f"🔍 DEBUG: Free slots: {len(free_slots)}, Partner bookings: {len(partner_bookings)}")
+        logger.debug(f"Free slots: {len(free_slots)}, Partner bookings: {len(partner_bookings)}")
 
         result = {
             'success': True,
@@ -182,16 +205,13 @@ def get_available_slots(request):
             'user_rating': user_rating
         }
 
-        print(f"✅ DEBUG: Returning {len(all_items)} items (free slots + partner bookings)")
+        logger.debug(f"Returning {len(all_items)} total items (free slots + partner bookings)")
 
         response = JsonResponse(result)
         response['Content-Type'] = 'application/json; charset=utf-8'
         return response
 
     except Exception as e:
-        print(f"🔥 ERROR in get_available_slots: {str(e)}")
-        print(f"🔥 ERROR traceback: {traceback.format_exc()}")
-
         logger.error(f"Error in get_available_slots: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
@@ -200,39 +220,33 @@ def get_available_slots(request):
 
 @login_required
 @require_POST
+@api_write_ratelimit(rate='10/m')
 def create_booking(request):
     """
-    Создание бронирования с КРАСИВЫМ HTML сообщением
-    БЕЗ ограничения на количество слотов в день
+    Создание бронирования (рефакторенная версия)
+
+    Улучшения:
+    - Код сократился с 350 строк до ~220
+    - Переиспользуемые функции валидации
+    - Единая генерация HTML сообщений
+    - Улучшенная читаемость
     """
     try:
+        # Получаем данные из формы
         court_id = request.POST.get('court_id')
         date_str = request.POST.get('date')
         start_time_str = request.POST.get('start_time')
         end_time_str = request.POST.get('end_time')
         duration = request.POST.get('duration', '1')
 
-        # Валидация обязательных полей
+        # 1. Валидация обязательных полей
         if not all([court_id, date_str, start_time_str]):
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Все поля должны быть заполнены
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
+            messages.error(request, create_error_message("Ошибка", "Все поля должны быть заполнены"))
             return redirect('booking')
 
         court = get_object_or_404(Court, id=court_id, is_available=True)
 
-        # Парсим дату и время
+        # 2. Парсим дату и время
         booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         start_time = datetime.strptime(start_time_str, '%H:%M').time()
 
@@ -247,165 +261,60 @@ def create_booking(request):
         today = timezone.now().date()
         current_time = timezone.now().time()
 
-        # 1. Валидация даты
-        if booking_date < today:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Нельзя бронировать корт на прошедшую дату
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
+        # 3. Валидация времени
+        is_valid, error_msg = validate_booking_times(
+            booking_date, start_time, end_time, today, current_time
+        )
+        if not is_valid:
+            messages.error(request, create_error_message("Ошибка", error_msg))
             return redirect('booking')
 
-        # Если сегодня, проверяем время
-        if booking_date == today and start_time < current_time:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Нельзя бронировать корт на прошедшее время сегодня
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
+        # 4. Валидация продолжительности
+        is_valid, duration_hours, error_msg = validate_booking_duration(
+            start_time, end_time, booking_date
+        )
+        if not is_valid:
+            messages.error(request, create_error_message("Ошибка", error_msg))
             return redirect('booking')
 
-        # 2. Проверка времени
-        if end_time <= start_time:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Время окончания должно быть позже времени начала
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
+        # 5. Проверка рабочих часов
+        is_valid, error_msg = validate_working_hours(start_time, end_time)
+        if not is_valid:
+            messages.error(request, create_error_message("Ошибка", error_msg))
             return redirect('booking')
 
-        # 3. Проверка продолжительности
-        start_dt = datetime.combine(booking_date, start_time)
-        end_dt = datetime.combine(booking_date, end_time)
-        if end_dt <= start_dt:
-            end_dt += timedelta(days=1)
-
-        duration_hours = (end_dt - start_dt).total_seconds() / 3600
-
-        if duration_hours < 1:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Минимальная продолжительность бронирования - 1 час
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
-            return redirect('booking')
-
-        if duration_hours > 3:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Максимальная продолжительность бронирования - 3 часа
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
-            return redirect('booking')
-
-        # 4. Проверка рабочих часов
-        WORKING_HOURS_START = datetime.strptime('08:00', '%H:%M').time()
-        WORKING_HOURS_END = datetime.strptime('22:00', '%H:%M').time()
-
-        if start_time < WORKING_HOURS_START or end_time > WORKING_HOURS_END:
-            error_html = '''
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                <div>
-                    <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                        ❌ Ошибка
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                        Бронирование доступно только с 08:00 до 22:00
-                    </div>
-                </div>
-            </div>
-            '''
-            messages.error(request, error_html)
-            return redirect('booking')
-
-        # 5. УБРАН ЛИМИТ НА КОЛИЧЕСТВО СЛОТОВ В ДЕНЬ!
-        # Пользователь может бронировать сколько угодно
-
-        # 6. Проверка пересечений с существующими бронированиями
+        # 6. Создание бронирования в транзакции
         with transaction.atomic():
-            existing_bookings = Booking.objects.select_for_update().filter(
-                court=court,
-                date=booking_date,
-                status__in=['pending', 'confirmed']
+            # Проверка конфликтов
+            has_conflict, conflicting_booking = check_time_conflicts(
+                court, booking_date, start_time, end_time
             )
 
-            # Проверяем пересечение по времени
-            for booking in existing_bookings:
-                if (booking.start_time <= start_time < booking.end_time or
-                        booking.start_time < end_time <= booking.end_time or
-                        (start_time <= booking.start_time and end_time >= booking.end_time)):
-                    conflict_start = booking.start_time.strftime('%H:%M')
-                    conflict_end = booking.end_time.strftime('%H:%M')
+            if has_conflict:
+                conflict_start = conflicting_booking.start_time.strftime('%H:%M')
+                conflict_end = conflicting_booking.end_time.strftime('%H:%M')
+                error_msg = f"Выбранное время уже занято с {conflict_start} до {conflict_end}"
+                messages.error(request, create_error_message("Время занято", error_msg))
+                return redirect('booking')
 
-                    error_html = f'''
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-                        <div>
-                            <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                                ❌ Время занято
-                            </div>
-                            <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                                Выбранное время уже занято с {conflict_start} до {conflict_end}
-                            </div>
-                        </div>
-                    </div>
-                    '''
-
-                    messages.error(request, error_html)
-                    return redirect('booking')
-
-            # 7. Получаем данные для поиска партнеров
+            # Получаем данные для поиска партнеров
             looking_for_partner = request.POST.get('looking_for_partner') == 'on'
             max_players = int(request.POST.get('max_players', 4))
             required_rating_level = request.POST.get('required_rating_level', '')
 
-            # 7. Создаем бронирование
+            # Получаем тип бронирования и тренера
+            booking_type = request.POST.get('booking_type', 'game')
+            coach_id = request.POST.get('coach')
+            coach = None
+
+            if coach_id and booking_type == 'training':
+                from django.contrib.auth.models import User
+                try:
+                    coach = User.objects.get(id=coach_id, groups__name='Тренеры')
+                except User.DoesNotExist:
+                    coach = None
+
+            # Создаем бронирование
             booking = Booking.objects.create(
                 user=request.user,
                 court=court,
@@ -413,33 +322,40 @@ def create_booking(request):
                 start_time=start_time,
                 end_time=end_time,
                 status='pending',
-                looking_for_partner=looking_for_partner,
-                max_players=max_players,
-                required_rating_level=required_rating_level if required_rating_level else None
+                booking_type=booking_type,
+                coach=coach,
+                looking_for_partner=looking_for_partner if booking_type == 'game' else False,
+                max_players=max_players if booking_type == 'game' else 1,
+                required_rating_level=required_rating_level if (required_rating_level and booking_type == 'game') else None
             )
 
-        # 8. Очищаем кэш слотов
+            # Повторная проверка (защита от race condition)
+            has_conflict, _ = check_time_conflicts(
+                court, booking_date, start_time, end_time, exclude_booking_id=booking.id
+            )
+
+            if has_conflict:
+                booking.delete()
+                error_msg = "Это время было забронировано другим пользователем. Пожалуйста, выберите другое время."
+                messages.error(request, create_error_message("Время занято", error_msg))
+                return redirect('booking')
+
+        # 7. Очищаем кэш
         clear_slots_cache(court_id=court_id, date_str=date_str)
 
-        # 9. Логируем
+        # 8. Логируем успех
         logger.info(
             f"Booking created: User {request.user.username} booked court {court.name} "
             f"on {booking_date} from {start_time_str} to {end_time.strftime('%H:%M')} "
-            f"(Duration: {duration_hours}h, Price: {booking.total_price} руб.)"
+            f"(Duration: {duration_hours}h, Price: {booking.total_price} руб., Type: {booking_type})"
         )
 
-        # 10. КРАСИВОЕ HTML СООБЩЕНИЕ ДЛЯ УВЕДОМЛЕНИЯ
-        duration_hours_int = int(duration_hours)
+        # 9. Формируем красивое сообщение об успехе
+        duration_text = pluralize_hours(duration_hours)
+        booking_type_text = "Тренировка" if booking_type == 'training' else "Игра"
+        coach_info = f" с тренером {coach.get_full_name() or coach.username}" if coach else ""
 
-        # Правильное склонение
-        if duration_hours_int == 1:
-            duration_text = "1 час"
-        elif 2 <= duration_hours_int <= 4:
-            duration_text = f"{duration_hours_int} часа"
-        else:
-            duration_text = f"{duration_hours_int} часов"
-
-        success_html = f'''
+        success_details = f"""
         <div style="display: flex; align-items: flex-start; gap: 12px;">
             <i class="fas fa-check-circle" style="font-size: 24px; color: white;"></i>
             <div style="flex: 1;">
@@ -447,7 +363,12 @@ def create_booking(request):
                     🎉 Бронирование успешно создано!
                 </div>
                 <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px;">
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 15px; align-items: center;">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 15px;">
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                            <i class="fas fa-clipboard-list"></i> Тип:
+                        </div>
+                        <div style="font-weight: bold; color: white; font-size: 14px;">{booking_type_text}{coach_info}</div>
+
                         <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
                             <i class="fas fa-court-sport"></i> Корт:
                         </div>
@@ -479,42 +400,23 @@ def create_booking(request):
                 </div>
             </div>
         </div>
-        '''
+        """
 
-        messages.success(request, success_html)
-
-        # 11. Редирект на профиль с хешем #bookings вместо параметра ?tab=bookings
+        messages.success(request, success_details)
         return redirect(f"{reverse('profile')}#bookings")
 
     except Exception as e:
-        # Логируем ошибку
         logger.error(
             f"Error creating booking for user {request.user.username}: {str(e)}",
-            exc_info=True,
-            extra={'request': request}
+            exc_info=True
         )
-
-        # КРАСИВОЕ СООБЩЕНИЕ ОБ ОШИБКЕ
-        error_html = f'''
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <i class="fas fa-exclamation-circle" style="font-size: 24px; color: white;"></i>
-            <div>
-                <div style="font-size: 16px; font-weight: bold; color: white; margin-bottom: 5px;">
-                    ❌ Ошибка при бронировании
-                </div>
-                <div style="font-size: 14px; color: rgba(255,255,255,0.9);">
-                    Произошла ошибка при создании бронирования. 
-                    Пожалуйста, попробуйте еще раз или обратитесь в поддержку.
-                </div>
-            </div>
-        </div>
-        '''
-
-        messages.error(request, error_html)
+        messages.error(request, create_error_message(
+            "Ошибка при бронировании",
+            "Произошла ошибка. Пожалуйста, попробуйте еще раз или обратитесь в поддержку."
+        ))
         return redirect('booking')
 
 
-@login_required
 @require_POST
 def cancel_booking(request, booking_id):
     """Отмена бронирования"""
@@ -621,64 +523,6 @@ def get_booking_info(request, booking_id):
     })
 
 
-# ========== ПРОВЕРКА ДОСТУПНОСТИ ==========
-
-@login_required
-@require_POST
-def check_availability(request):
-    """Проверка доступности слота перед бронированием (AJAX)"""
-    try:
-        court_id = request.POST.get('court_id')
-        date_str = request.POST.get('date')
-        start_time_str = request.POST.get('start_time')
-        duration = request.POST.get('duration', '1')
-
-        if not all([court_id, date_str, start_time_str]):
-            return JsonResponse({
-                'success': False,
-                'message': 'Все поля обязательны'
-            })
-
-        court = get_object_or_404(Court, id=court_id)
-        booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        start_time = datetime.strptime(start_time_str, '%H:%M').time()
-
-        # Рассчитываем end_time
-        hours = int(duration)
-        end_hour = int(start_time_str.split(':')[0]) + hours
-        end_time = datetime.strptime(f"{end_hour:02d}:00", '%H:%M').time()
-
-        # Проверяем существующие бронирования
-        existing_bookings = Booking.objects.filter(
-            court=court,
-            date=booking_date,
-            status__in=['pending', 'confirmed']
-        )
-
-        for booking in existing_bookings:
-            if (booking.start_time <= start_time < booking.end_time or
-                    booking.start_time < end_time <= booking.end_time or
-                    (start_time <= booking.start_time and end_time >= booking.end_time)):
-                return JsonResponse({
-                    'success': False,
-                    'available': False,
-                    'message': 'Выбранное время уже занято'
-                })
-
-        return JsonResponse({
-            'success': True,
-            'available': True,
-            'message': 'Время доступно для бронирования'
-        })
-
-    except Exception as e:
-        logger.error(f"Error checking availability: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'message': 'Ошибка при проверке доступности'
-        })
-
-
 # ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 def clear_slots_cache(court_id=None, date_str=None):
@@ -707,104 +551,11 @@ def clear_slots_cache(court_id=None, date_str=None):
 
 
 # ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
-
-@login_required
-def profile(request):
-    """
-    Объединенный профиль пользователя с вкладками
-    """
-    from django.contrib.auth.models import User
-
-    try:
-        user = User.objects.select_related('profile').get(id=request.user.id)
-    except User.DoesNotExist:
-        user = request.user
-
-    # Получаем бронирования с оптимизацией запросов
-    bookings = Booking.objects.filter(
-        user=request.user
-    ).select_related(
-        'court'
-    ).order_by(
-        '-date', '-start_time'
-    )
-
-    today = timezone.now().date()
-    current_time = timezone.now().time()
-
-    # Обрабатываем каждое бронирование
-    for booking in bookings:
-        booking.today = today
-
-        # Рассчитываем полную дату начала бронирования
-        booking_datetime = timezone.make_aware(
-            datetime.combine(booking.date, booking.start_time)
-        )
-
-        # Можно ли подтвердить? (за 24 часа до начала)
-        time_diff = booking_datetime - timezone.now()
-        booking.can_confirm_attr = timedelta(hours=0) < time_diff <= timedelta(hours=24)
-
-        # Сколько часов осталось до возможности подтверждения
-        if time_diff > timedelta(hours=24):
-            hours_until = (time_diff - timedelta(hours=24)).total_seconds() / 3600
-            booking.hours_until_confirmation_attr = max(0, int(hours_until))
-        else:
-            booking.hours_until_confirmation_attr = 0
-
-        # Прошедшее ли бронирование?
-        booking.is_past = booking.date < today or (
-                booking.date == today and booking.start_time < current_time
-        )
-
-        # Можно ли отменить? (не прошедшее и не отмененное)
-        booking.can_cancel = (
-                not booking.is_past and
-                booking.status in ['pending', 'confirmed']
-        )
-
-    # Статистика для пользователя
-    booking_stats = {
-        'total': bookings.count(),
-        'confirmed': bookings.filter(status='confirmed').count(),
-        'pending': bookings.filter(status='pending').count(),
-        'cancelled': bookings.filter(status='cancelled').count(),
-        'upcoming': bookings.filter(
-            Q(date__gt=today) |
-            Q(date=today, start_time__gt=current_time),
-            status__in=['pending', 'confirmed']
-        ).count(),
-    }
-
-    # Получаем активную вкладку из GET-параметра или session
-    active_tab = request.GET.get('tab', 'bookings')
-
-    context = {
-        'user': user,
-        'bookings': bookings,
-        'today': today,
-        'booking_stats': booking_stats,
-        'active_tab': active_tab,
-    }
-
-    return render(request, 'users/profile.html', context)
+# УДАЛЕНО: Дублирующая функция profile() - используем версию из users.views (импорт в начале файла)
 
 
 # ========== ДОПОЛНИТЕЛЬНЫЕ VIEW ==========
-
-
-
-def my_bookings(request):
-    """Показать все бронирования пользователя (для совместимости)"""
-    bookings = Booking.objects.filter(user=request.user).order_by('-date', '-start_time')
-    today = timezone.now().date()
-
-    for booking in bookings:
-        booking.today = today
-        booking.can_confirm_attr = booking.can_confirm
-        booking.hours_until_confirmation_attr = booking.hours_until_confirmation
-
-    return render(request, 'users/bookings.html', {'bookings': bookings, 'today': today})
+# УДАЛЕНО: my_bookings() - дублировало функционал profile()
 
 
 # ========== ПОИСК ПАРТНЁРОВ И ПРИГЛАШЕНИЯ ==========
@@ -814,25 +565,36 @@ def find_partners(request):
     """Страница поиска партнёров - бронирования, которые ищут игроков"""
     today = timezone.now().date()
 
+    # ОПТИМИЗАЦИЯ: Загружаем рейтинг пользователя один раз
+    try:
+        user_rating = request.user.rating.level
+    except (AttributeError, ObjectDoesNotExist):
+        user_rating = None
+
+    # ОПТИМИЗАЦИЯ: Используем Prefetch для оптимизации запросов
+    from django.db.models import Prefetch
+    from django.contrib.auth.models import User
+
     # Получаем бронирования, которые ищут партнёров
     available_bookings = Booking.objects.filter(
         looking_for_partner=True,
         status__in=['pending', 'confirmed'],
         date__gte=today
-    ).select_related('user', 'user__profile', 'user__rating', 'court').prefetch_related('partners').order_by('date', 'start_time')
+    ).select_related(
+        'user', 'user__profile', 'user__rating', 'court'
+    ).prefetch_related(
+        Prefetch('partners', queryset=User.objects.all(), to_attr='partners_list')
+    ).order_by('date', 'start_time')
 
     # Фильтруем бронирования, в которых есть свободные места
     bookings_with_slots = []
-    user_rating = None
-
-    try:
-        user_rating = request.user.rating.level
-    except:
-        user_rating = None
 
     for booking in available_bookings:
+        # ИСПРАВЛЕНА N+1: Проверяем через предзагруженный список
+        partner_ids = [p.id for p in booking.partners_list]
+
         # Пропускаем свои бронирования
-        if booking.user == request.user or request.user in booking.partners.all():
+        if booking.user == request.user or request.user.id in partner_ids:
             continue
 
         # Проверяем наличие мест
@@ -1093,3 +855,171 @@ def booking_detail(request, booking_id):
     }
 
     return render(request, 'booking/booking_detail.html', context)
+
+# ========== API ENDPOINTS ДЛЯ СТАТИСТИКИ И КАЛЕНДАРЯ ==========
+
+@login_required
+@require_GET
+@api_data_ratelimit(rate='30/m')
+def api_player_stats(request):
+    """API: Получить статистику игрока"""
+    try:
+        stats = get_player_stats(request.user)
+        
+        # Преобразуем datetime объекты для JSON
+        if stats['monthly_activity']:
+            for item in stats['monthly_activity']:
+                if 'month' in item and item['month']:
+                    item['month'] = item['month'].strftime('%Y-%m')
+        
+        return JsonResponse({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        logger.error(f"Error getting player stats: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка получения статистики'
+        }, status=500)
+
+
+@login_required
+@require_GET
+def api_calendar_events(request):
+    """API: Получить события для календаря"""
+    try:
+        start_str = request.GET.get('start')
+        end_str = request.GET.get('end')
+
+        if not start_str or not end_str:
+            return JsonResponse({
+                'success': False,
+                'message': 'Требуются параметры start и end'
+            }, status=400)
+
+        # Парсим даты - FullCalendar может отправить разные форматы
+        try:
+            from dateutil import parser as date_parser
+            # Используем dateutil для надежного парсинга любых форматов дат
+            start_date = date_parser.parse(start_str).date()
+            end_date = date_parser.parse(end_str).date()
+        except ImportError:
+            # Если dateutil не установлен, используем базовый парсинг
+            try:
+                # Извлекаем только дату из ISO строки
+                start_date = datetime.fromisoformat(start_str.split('T')[0]).date()
+                end_date = datetime.fromisoformat(end_str.split('T')[0]).date()
+            except Exception as date_error:
+                logger.error(f"Date parsing error: {date_error}, start={start_str}, end={end_str}")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Неверный формат даты'
+                }, status=400)
+        except Exception as date_error:
+            logger.error(f"Date parsing error: {date_error}, start={start_str}, end={end_str}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Неверный формат даты'
+            }, status=400)
+
+        events = get_calendar_events(request.user, start_date, end_date)
+
+        return JsonResponse(events, safe=False)
+
+    except Exception as e:
+        logger.error(f"Error getting calendar events: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка получения событий календаря'
+        }, status=500)
+
+
+@login_required
+@require_GET
+def api_available_slots(request):
+    """API: Получить доступные слоты для бронирования"""
+    try:
+        court_id = request.GET.get('court_id')
+        date_str = request.GET.get('date')
+        
+        if not court_id or not date_str:
+            return JsonResponse({
+                'success': False,
+                'message': 'Требуются параметры court_id и date'
+            }, status=400)
+        
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        slots = get_available_slots_analytics(court_id, date)
+        
+        return JsonResponse({
+            'success': True,
+            'slots': slots
+        })
+    
+    except Exception as e:
+        logger.error(f"Error getting available slots: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка получения доступных слотов'
+        }, status=500)
+
+
+
+@login_required
+def player_statistics(request):
+    """Страница со статистикой игрока"""
+    try:
+        stats = get_player_stats(request.user)
+        
+        context = {
+            'stats': stats,
+            'user': request.user,
+        }
+        
+        return render(request, 'booking/player_stats.html', context)
+    
+    except Exception as e:
+        logger.error(f"Error rendering player statistics: {str(e)}")
+        messages.error(request, 'Ошибка загрузки статистики')
+        return redirect('profile')
+
+
+@require_GET
+def get_coaches_list(request):
+    """API endpoint для получения списка тренеров"""
+    try:
+        from users.models import CoachProfile
+
+        coaches = CoachProfile.objects.filter(
+            is_active=True
+        ).select_related('user').order_by('-coach_rating', 'user__first_name')
+
+        coaches_data = []
+        for coach in coaches:
+            full_name = f"{coach.user.first_name} {coach.user.last_name}".strip()
+            display_name = full_name if full_name else coach.user.username
+
+            coaches_data.append({
+                'id': coach.user.id,
+                'name': display_name,
+                'rating': float(coach.coach_rating),
+                'hourly_rate': float(coach.hourly_rate),
+                'specialization': coach.specialization,
+                'experience_years': coach.experience_years,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'coaches': coaches_data,
+            'count': len(coaches_data)
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching coaches list: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Ошибка загрузки списка тренеров'
+        }, status=500)

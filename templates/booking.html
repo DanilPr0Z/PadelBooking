@@ -3,11 +3,646 @@
 
 {% block title %}Бронирование - Paddle Booking{% endblock %}
 
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+    /* Переключатель вида */
+    .view-switcher {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .view-btn {
+        padding: 12px 30px;
+        border: 2px solid #e5e7eb;
+        background: white;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .view-btn:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .view-btn.active {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+    }
+
+    /* Календарный вид */
+    .calendar-view {
+        display: none;
+    }
+
+    .calendar-view.active {
+        display: block;
+    }
+
+    .calendar-view .calendar-container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px 0;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .calendar-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .calendar-legend {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    /* Court filter */
+    .court-filter {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .court-filter-btn {
+        padding: 8px 16px;
+        border: 2px solid #e5e7eb;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+    .court-filter-btn:hover {
+        border-color: var(--primary-color);
+        background: rgba(158, 240, 26, 0.1);
+    }
+
+    .court-filter-btn.active {
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        color: white;
+    }
+
+    /* Табличный вид */
+    .table-view.active {
+        display: block;
+    }
+
+    .table-view:not(.active) {
+        display: none;
+    }
+
+    /* ========== FullCalendar ЛАЙМОВАЯ СТИЛИЗАЦИЯ ========== */
+
+    /* Базовые стили календаря */
+    #fullcalendar {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Заголовок календаря */
+    #fullcalendar .fc-toolbar {
+        background: linear-gradient(135deg, #9ef01a 0%, #bff167 100%) !important;
+        padding: 20px !important;
+        border-radius: 12px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 4px 15px rgba(158, 240, 26, 0.3) !important;
+        position: relative !important;
+    }
+
+    #fullcalendar .fc-toolbar-title {
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 24px !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* КРИТИЧНО: Кнопки должны быть кликабельными */
+    #fullcalendar .fc-button {
+        background-color: white !important;
+        color: #38b000 !important;
+        border: 2px solid white !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 8px 16px !important;
+        transition: all 0.3s ease !important;
+        text-transform: capitalize !important;
+        cursor: pointer !important;
+        outline: none !important;
+    }
+
+    #fullcalendar .fc-button:not(:disabled):hover {
+        background-color: #bff167 !important;
+        color: white !important;
+        border-color: #bff167 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    #fullcalendar .fc-button:not(:disabled):active {
+        transform: translateY(0) !important;
+    }
+
+    #fullcalendar .fc-button-primary.fc-button-active,
+    #fullcalendar .fc-button-primary:not(:disabled).fc-button-active {
+        background-color: #7cc00f !important;
+        color: white !important;
+        border-color: #7cc00f !important;
+    }
+
+    #fullcalendar .fc-button:disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+    }
+
+    /* Сетка календаря */
+    .fc .fc-scrollgrid {
+        border: 2px solid #f0f0f0 !important;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .fc .fc-col-header {
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%);
+    }
+
+    .fc .fc-col-header-cell {
+        padding: 12px 0;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .fc .fc-daygrid-day {
+        transition: all 0.2s;
+    }
+
+    .fc .fc-daygrid-day:hover {
+        background: rgba(158, 240, 26, 0.05);
+    }
+
+    .fc .fc-daygrid-day-number {
+        color: #666;
+        font-weight: 600;
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    /* Сегодняшний день */
+    .fc .fc-day-today {
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.15) 0%, rgba(191, 241, 103, 0.15) 100%) !important;
+        border: 2px solid var(--primary-color) !important;
+    }
+
+    .fc .fc-day-today .fc-daygrid-day-number {
+        color: var(--primary-dark);
+        font-weight: 700;
+        background: white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* События/бронирования */
+    .fc-event {
+        cursor: pointer;
+        border: none !important;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s;
+        margin: 2px 0;
+    }
+
+    .fc-event:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        opacity: 1 !important;
+    }
+
+    /* Цвета для разных статусов */
+    .fc-event.status-confirmed {
+        background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+        color: white;
+    }
+
+    .fc-event.status-pending {
+        background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+        color: white;
+    }
+
+    .fc-event.status-training {
+        background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+        color: white;
+    }
+
+    /* Выходные дни */
+    .fc .fc-day-sat,
+    .fc .fc-day-sun {
+        background: rgba(255, 152, 0, 0.03);
+    }
+
+    /* Временная сетка */
+    .fc .fc-timegrid-slot {
+        height: 40px;
+    }
+
+    .fc .fc-timegrid-slot-label {
+        color: #666;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .fc .fc-timegrid-now-indicator-line {
+        border-color: var(--primary-color);
+        border-width: 2px;
+    }
+
+    .fc .fc-timegrid-now-indicator-arrow {
+        border-color: var(--primary-color);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .fc .fc-toolbar {
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 20px;
+        }
+
+        .fc .fc-button {
+            font-size: 13px !important;
+            padding: 6px 12px !important;
+        }
+    }
+
+    /* ========== МОДАЛЬНОЕ ОКНО СОБЫТИЯ ========== */
+    .event-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .event-modal.active {
+        display: flex;
+    }
+
+    .event-modal-content {
+        background: white;
+        padding: 0;
+        border-radius: 16px;
+        max-width: 550px;
+        width: 90%;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideInUp 0.4s ease;
+    }
+
+    .event-modal-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        padding: 25px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid var(--primary-dark);
+    }
+
+    .event-modal-header h3 {
+        margin: 0;
+        color: white;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .event-modal-close {
+        background: white;
+        color: var(--primary-dark);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+        font-weight: 700;
+    }
+
+    .event-modal-close:hover {
+        transform: rotate(90deg) scale(1.1);
+        background: var(--primary-dark);
+        color: white;
+    }
+
+    #modalBody {
+        padding: 30px;
+        overflow-y: auto;
+        max-height: calc(85vh - 100px);
+    }
+
+    .event-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 15px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .event-detail:last-child {
+        border-bottom: none;
+    }
+
+    .event-detail-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .event-detail-value {
+        font-weight: 700;
+        color: #333;
+        text-align: right;
+        font-size: 15px;
+    }
+
+    .event-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .btn-event {
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+    }
+
+    .btn-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-join {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+    }
+
+    .btn-join:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(158, 240, 26, 0.4);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* Темная тема для модального окна */
+    :root[data-theme="dark"] .event-modal-content {
+        background: var(--card-bg);
+    }
+
+    :root[data-theme="dark"] #modalBody {
+        background: var(--card-bg);
+    }
+
+    :root[data-theme="dark"] .event-detail {
+        border-bottom-color: var(--card-border);
+    }
+
+    :root[data-theme="dark"] .event-detail-label {
+        color: var(--gray-color);
+    }
+
+    :root[data-theme="dark"] .event-detail-value {
+        color: var(--text-color);
+    }
+
+    .event-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .event-modal-close {
+        cursor: pointer;
+        font-size: 24px;
+        color: #6b7280;
+    }
+
+    .event-modal-close:hover {
+        color: #1a1a1a;
+    }
+
+    .event-detail {
+        margin-bottom: 15px;
+    }
+
+    .event-detail-label {
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .event-detail-value {
+        font-size: 16px;
+        color: #1a1a1a;
+    }
+
+    .event-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn-event {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-view {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: #2563eb;
+    }
+
+    .btn-join {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-join:hover {
+        background: #059669;
+    }
+
+    /* Стили для переключателя типа бронирования */
+    .type-option .type-card {
+        text-align: center;
+        padding: 20px 15px;
+        border: 3px solid #e5e7eb;
+        border-radius: 12px;
+        background: white;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .type-option:hover .type-card {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(158, 240, 26, 0.2);
+    }
+
+    .type-option.active .type-card {
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%);
+        box-shadow: 0 8px 20px rgba(158, 240, 26, 0.25);
+        transform: scale(1.02);
+    }
+
+    .type-option .type-card i {
+        color: var(--secondary-color);
+        transition: all 0.3s;
+    }
+
+    .type-option.active .type-card i {
+        color: var(--primary-color);
+        transform: scale(1.1);
+    }
+
+    #coach-selection {
+        animation: slideDown 0.4s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h1>Бронирование кортов</h1>
     <p>Выберите дату, корт и время для бронирования</p>
 </div>
+
+<!-- Переключатель вида -->
+<div class="view-switcher">
+    <button class="view-btn active" onclick="switchView('table')">
+        <i class="fas fa-list"></i> Табличный вид
+    </button>
+    <button class="view-btn" onclick="switchView('calendar')">
+        <i class="fas fa-calendar"></i> Календарь
+    </button>
+</div>
+
+<!-- Табличный вид (исходный) -->
+<div class="table-view active" id="tableView">
 
 <!-- ГОРИЗОНТАЛЬНЫЙ КАЛЕНДАРЬ -->
 <div class="calendar-container">
@@ -206,42 +841,66 @@
             <input type="hidden" name="end_time" id="form-end-time">
             <input type="hidden" name="duration" id="form-duration" value="1">
 
-            <div class="partner-options" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 15px;">
-                    <input type="checkbox" name="looking_for_partner" id="looking-for-partner" style="width: 20px; height: 20px;">
-                    <span style="font-weight: 600; color: var(--secondary-color);">
-                        <i class="fas fa-user-friends"></i> Ищу партнеров для игры
-                    </span>
+            <!-- Тип бронирования -->
+            <div class="booking-type-selector" style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 12px; font-weight: 600; color: var(--secondary-color); font-size: 15px;">
+                    <i class="fas fa-clipboard-list"></i> Тип бронирования:
                 </label>
-
-                <div id="partner-fields" style="display: none; margin-top: 15px; padding-left: 30px;">
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; margin-bottom: 5px; color: #666;">Максимум игроков:</label>
-                        <select name="max_players" id="max-players" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                            <option value="2">2 игрока</option>
-                            <option value="3">3 игрока</option>
-                            <option value="4" selected>4 игрока</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; margin-bottom: 5px; color: #666;">Требуемый уровень (опционально):</label>
-                        <select name="required_rating_level" id="required-rating" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                            <option value="">Любой уровень</option>
-                            <option value="D">D - Новичок</option>
-                            <option value="D+">D+ - Начинающий</option>
-                            <option value="C-">C- - Начинающий / Слабый средний</option>
-                            <option value="C">C - Средний</option>
-                            <option value="C+">C+ - Средний / Крепкий любитель</option>
-                            <option value="B-">B- - Крепкий любитель</option>
-                            <option value="B">B - Продвинутый</option>
-                            <option value="B+">B+ - Топ-любитель</option>
-                            <option value="A">A - Кандидат/Мастер спорта</option>
-                            <option value="PRO">PRO - Профессионал</option>
-                        </select>
-                        <small style="color: #666; font-size: 0.85rem;">К вам смогут присоединиться только игроки указанного уровня</small>
-                    </div>
+                <div style="display: flex; gap: 12px;">
+                    <label class="type-option active" style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="booking_type" value="game" checked style="display: none;">
+                        <div class="type-card">
+                            <i class="fas fa-users" style="font-size: 24px; margin-bottom: 8px;"></i>
+                            <span style="font-weight: 600; font-size: 15px;">Игра</span>
+                            <small style="display: block; font-size: 12px; color: #666; margin-top: 4px;">Играть с друзьями</small>
+                        </div>
+                    </label>
+                    <label class="type-option" style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="booking_type" value="training" style="display: none;">
+                        <div class="type-card">
+                            <i class="fas fa-dumbbell" style="font-size: 24px; margin-bottom: 8px;"></i>
+                            <span style="font-weight: 600; font-size: 15px;">Тренировка</span>
+                            <small style="display: block; font-size: 12px; color: #666; margin-top: 4px;">С тренером</small>
+                        </div>
+                    </label>
                 </div>
+            </div>
+
+            <!-- Ищу партнера (показывается только для игр) -->
+            <div id="partner-search-section" style="margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%); border-radius: 12px; border: 2px solid #b3d9ff;">
+                <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+                    <input type="checkbox" name="looking_for_partner" id="looking-for-partner" value="1" style="
+                        width: 20px;
+                        height: 20px;
+                        margin-right: 12px;
+                        cursor: pointer;
+                        accent-color: var(--primary-color);
+                    ">
+                    <div style="flex: 1;">
+                        <span style="font-weight: 600; color: var(--secondary-color); font-size: 15px;">
+                            <i class="fas fa-user-plus"></i> Ищу партнера для игры
+                        </span>
+                        <small style="display: block; font-size: 12px; color: #666; margin-top: 4px;">
+                            Ваше бронирование будет видно другим игрокам, которые ищут партнера
+                        </small>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Выбор тренера (показывается только для тренировок) -->
+            <div id="coach-selection" style="display: none; margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #fff8f0 0%, #fff5e6 100%); border-radius: 12px; border: 2px solid #ffe0b3;">
+                <label style="display: block; margin-bottom: 12px; font-weight: 600; color: var(--secondary-color); font-size: 15px;">
+                    <i class="fas fa-user-tie"></i> Выберите тренера:
+                </label>
+                <select name="coach" id="coach-select" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; background: white;">
+                    <option value="">Без тренера</option>
+                    {% comment %}
+                    <!-- Тренеры будут загружены через AJAX -->
+                    {% endcomment %}
+                </select>
+                <small style="display: block; margin-top: 8px; color: #666; font-size: 13px;">
+                    <i class="fas fa-info-circle"></i> Выбор тренера изменит стоимость бронирования
+                </small>
             </div>
 
             <div class="form-actions">
@@ -743,23 +1402,435 @@ document.addEventListener('DOMContentLoaded', function() {
     // Запускаем после загрузки страницы
     setTimeout(setupSectionHandlers, 100);
 
-    // ========== УПРАВЛЕНИЕ ПОЛЯМИ "ИЩУ ПАРТНЕРА" ==========
-    const lookingForPartnerCheckbox = document.getElementById('looking-for-partner');
-    const partnerFields = document.getElementById('partner-fields');
+    // ========== УПРАВЛЕНИЕ ТИПОМ БРОНИРОВАНИЯ ==========
+    const typeOptions = document.querySelectorAll('.type-option');
+    const coachSelection = document.getElementById('coach-selection');
+    const partnerSearchSection = document.getElementById('partner-search-section');
+    const coachSelect = document.getElementById('coach-select');
 
-    if (lookingForPartnerCheckbox && partnerFields) {
-        lookingForPartnerCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                partnerFields.style.display = 'block';
-            } else {
-                partnerFields.style.display = 'none';
+    // Переключение между типами бронирования
+    typeOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Убираем активный класс у всех опций
+            typeOptions.forEach(opt => opt.classList.remove('active'));
+
+            // Добавляем активный класс к выбранной опции
+            this.classList.add('active');
+
+            // Отмечаем соответствующий radio button
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+
+                // Показываем/скрываем секции в зависимости от типа
+                if (radio.value === 'training') {
+                    // Тренировка: показываем выбор тренера, скрываем поиск партнера
+                    if (coachSelection) coachSelection.style.display = 'block';
+                    if (partnerSearchSection) partnerSearchSection.style.display = 'none';
+
+                    // Загружаем список тренеров
+                    loadCoaches();
+                } else {
+                    // Игра: показываем поиск партнера, скрываем выбор тренера
+                    if (coachSelection) coachSelection.style.display = 'none';
+                    if (partnerSearchSection) partnerSearchSection.style.display = 'block';
+                    if (coachSelect) coachSelect.value = '';
+                }
             }
         });
+    });
+
+    // Загрузка списка тренеров
+    function loadCoaches() {
+        fetch('/booking/api/coaches/')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('coach-select');
+                if (!select) return;
+
+                // Очищаем предыдущие опции (кроме "Без тренера")
+                select.innerHTML = '<option value="">Без тренера (опционально)</option>';
+
+                // Добавляем тренеров
+                data.coaches.forEach(coach => {
+                    const option = document.createElement('option');
+                    option.value = coach.id;
+                    option.textContent = `${coach.name} (⭐ ${coach.rating}) - ${coach.hourly_rate}₽/час`;
+                    option.dataset.rate = coach.hourly_rate;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки тренеров:', error);
+            });
     }
 });
 </script>
+
+</div> <!-- Закрываем table-view -->
+
+<!-- Календарный вид -->
+<div class="calendar-view" id="calendarView">
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="calendar-title">
+                <span>📅</span>
+                Календарь бронирований
+            </div>
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Моё подтверждено</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f59e0b;"></div>
+                    <span>Моё ожидает</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Занято</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фильтр по кортам -->
+        <div class="court-filter">
+            <button class="court-filter-btn active" data-court-id="all">Все корты</button>
+            {% for court in courts %}
+            <button class="court-filter-btn" data-court-id="{{ court.id }}">{{ court.name }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Календарь -->
+        <div id="fullcalendar"></div>
+    </div>
+</div>
+
+<!-- Modal для деталей события -->
+<div class="event-modal" id="eventModal">
+    <div class="event-modal-content">
+        <div class="event-modal-header">
+            <h3 id="modalTitle">Детали бронирования</h3>
+            <span class="event-modal-close" onclick="closeEventModal()">&times;</span>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/booking.js' %}"></script>
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+// Проверка загрузки FullCalendar
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof FullCalendar !== 'undefined') {
+        console.log('✅ FullCalendar library loaded successfully!', FullCalendar);
+    } else {
+        console.error('❌ FullCalendar library NOT loaded!');
+    }
+});
+</script>
+
+<script>
+// Переключатель вида
+function switchView(view) {
+    console.log('🔄 Switching to view:', view);
+    const tableView = document.getElementById('tableView');
+    const calendarView = document.getElementById('calendarView');
+    const buttons = document.querySelectorAll('.view-btn');
+
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    if (view === 'table') {
+        console.log('📋 Activating table view');
+        tableView.classList.add('active');
+        calendarView.classList.remove('active');
+        buttons[0].classList.add('active');
+    } else {
+        console.log('📅 Activating calendar view');
+        tableView.classList.remove('active');
+        calendarView.classList.add('active');
+        buttons[1].classList.add('active');
+
+        // Инициализируем календарь при первом открытии
+        if (!window.calendarInitialized) {
+            console.log('🆕 First time opening calendar, initializing...');
+
+            // ВАЖНО: Даем браузеру время отрисовать DOM элемент
+            setTimeout(() => {
+                console.log('⏰ Starting calendar initialization after timeout...');
+                try {
+                    initFullCalendar();
+                    window.calendarInitialized = true;
+                } catch (error) {
+                    console.error('❌ Error initializing calendar:', error);
+                    console.error('Stack trace:', error.stack);
+                }
+            }, 100);
+        } else {
+            console.log('♻️ Calendar already initialized');
+            // Принудительно обновляем размер календаря
+            if (window.fullCalendar) {
+                window.fullCalendar.updateSize();
+            }
+        }
+    }
+}
+
+// Инициализация FullCalendar
+function initFullCalendar() {
+    console.log('🎯 Initializing FullCalendar...');
+    console.log('🔍 Looking for element with ID: fullcalendar');
+
+    const calendarEl = document.getElementById('fullcalendar');
+    console.log('🔎 Search result:', calendarEl);
+
+    if (!calendarEl) {
+        console.error('❌ Calendar element #fullcalendar NOT found!');
+        console.error('Available elements in calendarView:', document.getElementById('calendarView'));
+        return;
+    }
+
+    console.log('✅ Calendar element found:', calendarEl);
+    console.log('📏 Element dimensions:', {
+        width: calendarEl.offsetWidth,
+        height: calendarEl.offsetHeight,
+        display: window.getComputedStyle(calendarEl).display
+    });
+
+    if (!window.FullCalendar) {
+        console.error('❌ FullCalendar library not available!');
+        return;
+    }
+    console.log('✅ FullCalendar library is available');
+
+    let selectedCourtId = 'all';
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'ru',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Сегодня',
+            month: 'Месяц',
+            week: 'Неделя',
+            day: 'День'
+        },
+        height: 'auto',
+        slotMinTime: '08:00:00',
+        slotMaxTime: '22:00:00',
+        allDaySlot: false,
+        nowIndicator: true,
+        selectable: true,
+
+        // Загрузка событий с сервера
+        events: function(info, successCallback, failureCallback) {
+            console.log('📡 Fetching calendar events from:', info.startStr, 'to:', info.endStr);
+
+            fetch(`/booking/api/calendar-events/?start=${info.startStr}&end=${info.endStr}`)
+                .then(response => {
+                    console.log('📡 Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📅 Calendar events loaded:', data);
+
+                    // Проверяем что data это массив, а не объект с ошибкой
+                    if (!Array.isArray(data)) {
+                        console.error('❌ API returned non-array:', data);
+                        if (data.success === false) {
+                            console.error('API error message:', data.message);
+                        }
+                        successCallback([]);
+                        return;
+                    }
+
+                    // Фильтруем по выбранному корту
+                    let filteredEvents = data;
+                    if (selectedCourtId !== 'all') {
+                        filteredEvents = data.filter(event =>
+                            event.extendedProps && event.extendedProps.courtId == selectedCourtId
+                        );
+                        console.log(`🔍 Filtered events for court ${selectedCourtId}:`, filteredEvents.length);
+                    }
+
+                    successCallback(filteredEvents);
+                })
+                .catch(error => {
+                    console.error('❌ Error loading calendar events:', error);
+                    failureCallback(error);
+                });
+        },
+
+        // Клик по событию
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            showEventDetails(info.event);
+        },
+
+        // Клик по дате (для быстрого бронирования)
+        dateClick: function(info) {
+            // Проверяем что дата не в прошлом
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const clickedDate = new Date(info.date);
+            clickedDate.setHours(0, 0, 0, 0);
+
+            if (clickedDate >= today) {
+                console.log('📅 Date clicked:', info.dateStr);
+
+                // Переключаемся на табличный вид
+                switchView('table');
+
+                // Устанавливаем выбранную дату и загружаем слоты
+                setTimeout(() => {
+                    // Находим кнопку дня или программно устанавливаем дату
+                    const dayBtn = document.querySelector(`[data-date="${info.dateStr}"]`);
+                    if (dayBtn) {
+                        dayBtn.click();
+                    } else {
+                        // Если кнопка не найдена (дата не в текущей неделе),
+                        // программно загружаем слоты для выбранной даты
+                        if (window.selectedCourtData && window.selectedCourtData.id) {
+                            if (window.loadTimeSlots) {
+                                window.loadTimeSlots(window.selectedCourtData.id, info.dateStr);
+                            }
+                        }
+                        // Сохраняем выбранную дату
+                        if (window.selectedDate !== undefined) {
+                            window.selectedDate = new Date(info.dateStr);
+                        }
+                    }
+                }, 200);
+            } else {
+                console.log('⚠️ Cannot select past date');
+            }
+        },
+
+        // Настройки внешнего вида
+        eventClassNames: function(arg) {
+            return ['fc-event-custom'];
+        }
+    });
+
+    console.log('📅 Rendering calendar...');
+    calendar.render();
+    console.log('✅ Calendar rendered successfully!');
+    window.fullCalendar = calendar;
+
+    // Проверка кликабельности кнопок
+    setTimeout(() => {
+        const buttons = document.querySelectorAll('.fc-button');
+        console.log(`🔍 Found ${buttons.length} calendar buttons`);
+        buttons.forEach((btn, idx) => {
+            console.log(`  Button ${idx}: ${btn.textContent}, disabled: ${btn.disabled}`);
+        });
+    }, 500);
+
+    // Фильтр по кортам
+    document.querySelectorAll('.court-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.court-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedCourtId = this.dataset.courtId;
+            calendar.refetchEvents();
+        });
+    });
+}
+
+// Показать детали события
+function showEventDetails(event) {
+    const props = event.extendedProps;
+    const modal = document.getElementById('eventModal');
+    const modalBody = document.getElementById('modalBody');
+
+    let statusBadge = '';
+    if (props.status === 'confirmed') {
+        statusBadge = '<span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">Подтверждено</span>';
+    } else if (props.status === 'pending') {
+        statusBadge = '<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">Ожидает</span>';
+    }
+
+    const startDate = new Date(event.start);
+    const endDate = new Date(event.end);
+
+    let actions = '';
+    if (props.isMine) {
+        actions = `
+            <div class="event-actions">
+                <button class="btn-event btn-view" onclick="window.location.href='/users/profile/?tab=bookings'">
+                    Посмотреть в профиле
+                </button>
+            </div>
+        `;
+    } else if (props.canJoin) {
+        actions = `
+            <div class="event-actions">
+                <button class="btn-event btn-join" onclick="window.location.href='/booking/join/${props.bookingId}/'">
+                    Присоединиться
+                </button>
+            </div>
+        `;
+    }
+
+    modalBody.innerHTML = `
+        <div class="event-detail">
+            <div class="event-detail-label">Корт</div>
+            <div class="event-detail-value">${props.courtName}</div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Дата и время</div>
+            <div class="event-detail-value">
+                ${startDate.toLocaleDateString('ru-RU')} <br>
+                ${startDate.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})} -
+                ${endDate.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
+            </div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Создатель</div>
+            <div class="event-detail-value">${props.creatorName}</div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Статус</div>
+            <div class="event-detail-value">${statusBadge}</div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Игроки</div>
+            <div class="event-detail-value">${props.partnersCount + 1} / ${props.maxPlayers}</div>
+        </div>
+        <div class="event-detail">
+            <div class="event-detail-label">Стоимость</div>
+            <div class="event-detail-value">${props.price} ₽</div>
+        </div>
+        ${actions}
+    `;
+
+    modal.classList.add('active');
+}
+
+// Закрыть модальное окно
+function closeEventModal() {
+    document.getElementById('eventModal').classList.remove('active');
+}
+
+// Закрытие по клику вне modal
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('eventModal');
+    if (e.target === modal) {
+        closeEventModal();
+    }
+});
+</script>
 {% endblock %}

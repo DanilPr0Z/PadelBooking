@@ -7,7 +7,9 @@
     <title>{% block title %}Paddle Booking{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated %}user-authenticated{% endif %}">
     {% include 'partials/navbar.html' %}
@@ -42,9 +44,28 @@
     </footer>
 
     <!-- JavaScript для преобразования Django messages в красивые уведомления -->
-
-
+    <script src="{% static 'js/components.js' %}" charset="UTF-8"></script>
     <script src="{% static 'js/main.js' %}" charset="UTF-8"></script>
+
+    <!-- Автоматическое преобразование Django messages в Toast уведомления -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS or 'success' in message.tags %}
+                        toast.success(`{{ message|escapejs }}`);
+                    {% elif message.level == DEFAULT_MESSAGE_LEVELS.ERROR or 'error' in message.tags %}
+                        toast.error(`{{ message|escapejs }}`);
+                    {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING or 'warning' in message.tags %}
+                        toast.warning(`{{ message|escapejs }}`);
+                    {% else %}
+                        toast.info(`{{ message|escapejs }}`);
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

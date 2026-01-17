@@ -8,12 +8,16 @@
         <div class="nav-menu">
             <a href="{% url 'news' %}" class="nav-item {% if request.path == '/news/' %}active{% endif %}">Новости</a>
             <a href="{% url 'booking' %}" class="nav-item {% if request.path == '/booking/' %}active{% endif %}">Бронирование</a>
-            <a href="{% url 'find_partners' %}" class="nav-item {% if request.path == '/booking/find-partners/' %}active{% endif %}">Найти напарника</a>
             <a href="{% url 'coaches_list' %}" class="nav-item {% if '/users/coaches/' in request.path %}active{% endif %}">Тренеры</a>
             <a href="{% url 'tournaments' %}" class="nav-item {% if request.path == '/tournaments/' %}active{% endif %}">Турниры</a>
         </div>
 
         <div class="nav-auth">
+            <!-- Переключатель темной темы -->
+            <button class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">
+                <i class="fas fa-moon"></i>
+            </button>
+
             {% if user.is_authenticated %}
                 <div class="user-dropdown">
                     <button class="user-btn">
@@ -23,6 +27,7 @@
                     <div class="dropdown-content">
                         <a href="{% url 'profile' %}" id="profile-link"><i class="fas fa-user"></i> Профиль</a>
                         <a href="{% url 'profile' %}#bookings" id="bookings-link"><i class="fas fa-calendar"></i> Мои записи</a>
+                        <a href="{% url 'profile' %}#statistics" id="statistics-link"><i class="fas fa-chart-bar"></i> Моя статистика</a>
                         <a href="{% url 'training_sessions' %}"><i class="fas fa-dumbbell"></i> Мои тренировки</a>
                         <a href="{% url 'profile' %}#rating" id="rating-link"><i class="fas fa-chart-line"></i> Мой рейтинг</a>
                         <a href="#" id="openLogoutModal"><i class="fas fa-sign-out-alt"></i> Выйти</a>
@@ -204,4 +209,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== ОТКРЫТИЕ МОДАЛЬНЫХ ОКОН ВХОДА/РЕГИСТРАЦИИ ==========
     // Обработчики определены в main.js, здесь ничего делать не нужно
 });
+</script>
+
+<!-- ========== ПЕРЕКЛЮЧЕНИЕ ТЕМНОЙ ТЕМЫ (ГЛОБАЛЬНО) ========== -->
+<script>
+// Функция переключения темы - глобальная
+function toggleTheme() {
+    const html = document.documentElement;
+    const themeToggle = document.querySelector('.theme-toggle i');
+    const currentTheme = html.getAttribute('data-theme');
+
+    if (currentTheme === 'dark') {
+        html.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        if (themeToggle) {
+            themeToggle.classList.remove('fa-sun');
+            themeToggle.classList.add('fa-moon');
+        }
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        if (themeToggle) {
+            themeToggle.classList.remove('fa-moon');
+            themeToggle.classList.add('fa-sun');
+        }
+    }
+}
+
+// Загружаем сохраненную тему при загрузке страницы
+(function() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    const html = document.documentElement;
+
+    if (savedTheme === 'dark') {
+        html.setAttribute('data-theme', 'dark');
+    }
+
+    // Обновляем иконку после загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        const themeToggle = document.querySelector('.theme-toggle i');
+        if (themeToggle && savedTheme === 'dark') {
+            themeToggle.classList.remove('fa-moon');
+            themeToggle.classList.add('fa-sun');
+        }
+    });
+})();
 </script>

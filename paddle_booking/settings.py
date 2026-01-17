@@ -1,13 +1,20 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key-change-this-in-production'
+# КРИТИЧНО: Используем переменные окружения для безопасности
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-change-this-in-production')
 
-DEBUG = True
+# ВАЖНО: В production DEBUG должен быть False
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+# ВАЖНО: Указываем разрешенные хосты
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -142,4 +149,18 @@ if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     print(f"✅ Создана папка для логов: {LOG_DIR}")
 
-CORS_ALLOW_ALL_ORIGINS = True
+# ВАЖНО: Не разрешаем все origins в production
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # True только в режиме отладки
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if not DEBUG else []
+
+# Настройки безопасности для production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 год
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+# Удален импорт csrf_exempt для улучшения безопасности
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from .forms import RegistrationForm, LoginForm, EmailUpdateForm, PhoneVerificationForm, AvatarUploadForm
@@ -11,10 +11,12 @@ from django.db.models import Prefetch, Count, Q
 from datetime import datetime, timedelta
 from booking.models import Booking, Court
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @require_POST
-@csrf_exempt
 def ajax_register(request):
     """AJAX регистрация - исправленная версия"""
     try:
@@ -50,7 +52,7 @@ def ajax_register(request):
 
     except Exception as e:
         # Логируем ошибку для отладки
-        print(f"Ошибка при регистрации: {str(e)}")
+        logger.error(f"Registration error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -60,7 +62,6 @@ def ajax_register(request):
 
 
 @require_POST
-@csrf_exempt
 def ajax_login(request):
     """AJAX вход по username или телефону"""
     try:
@@ -107,7 +108,7 @@ def ajax_login(request):
         })
 
     except Exception as e:
-        print(f"Ошибка при входе: {str(e)}")
+        logger.error(f"Login error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -158,7 +159,6 @@ def user_logout(request):
 
 
 @require_POST
-@csrf_exempt
 def ajax_logout(request):
     """AJAX выход"""
     logout(request)
@@ -169,7 +169,6 @@ def ajax_logout(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def update_email(request):
     """AJAX обновление email пользователя"""
@@ -204,7 +203,7 @@ def update_email(request):
         })
 
     except Exception as e:
-        print(f"Ошибка при обновлении email: {str(e)}")
+        logger.error(f"Email update error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -214,7 +213,6 @@ def update_email(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def verify_phone(request):
     """AJAX подтверждение телефона"""
@@ -255,7 +253,7 @@ def verify_phone(request):
         })
 
     except Exception as e:
-        print(f"Ошибка при подтверждении телефона: {str(e)}")
+        logger.error(f"Phone verification error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -265,7 +263,6 @@ def verify_phone(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def resend_verification_code(request):
     """AJAX повторная отправка кода подтверждения"""
@@ -276,7 +273,7 @@ def resend_verification_code(request):
 
             # В реальном приложении здесь был бы код отправки SMS
             # Для тестирования просто логируем
-            print(f"Код подтверждения для {request.user.profile.phone}: {code}")
+            logger.info(f"Verification code for {request.user.profile.phone}: {code}")
 
             return JsonResponse({
                 'success': True,
@@ -289,7 +286,7 @@ def resend_verification_code(request):
             })
 
     except Exception as e:
-        print(f"Ошибка при отправке кода: {str(e)}")
+        logger.error(f"Code sending error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -299,7 +296,6 @@ def resend_verification_code(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def verify_email(request):
     """AJAX подтверждение email"""
@@ -332,7 +328,7 @@ def verify_email(request):
             })
 
     except Exception as e:
-        print(f"Ошибка при подтверждении email: {str(e)}")
+        logger.error(f"Email confirmation error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -342,7 +338,6 @@ def verify_email(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def resend_email_verification_code(request):
     """AJAX повторная отправка кода подтверждения email"""
@@ -381,7 +376,6 @@ def resend_email_verification_code(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def upload_avatar(request):
     """AJAX загрузка аватарки"""
@@ -432,7 +426,7 @@ def upload_avatar(request):
             'message': str(e)
         })
     except Exception as e:
-        print(f"Ошибка при загрузке аватарки: {str(e)}")
+        logger.error(f"Avatar upload error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -442,7 +436,6 @@ def upload_avatar(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def delete_avatar(request):
     """AJAX удаление аватарки"""
@@ -466,7 +459,7 @@ def delete_avatar(request):
             })
 
     except Exception as e:
-        print(f"Ошибка при удалении аватарки: {str(e)}")
+        logger.error(f"Avatar deletion error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -476,7 +469,6 @@ def delete_avatar(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def update_profile(request):
     """AJAX обновление данных профиля"""
@@ -516,7 +508,7 @@ def update_profile(request):
         })
 
     except Exception as e:
-        print(f"Ошибка при обновлении профиля: {str(e)}")
+        logger.error(f"Profile update error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -540,9 +532,9 @@ def profile(request):
     """
     from django.contrib.auth.models import User
 
-    # Получаем пользователя с профилем
+    # ОПТИМИЗАЦИЯ: Получаем пользователя с профилем и рейтингом за один запрос
     try:
-        user = User.objects.select_related('profile').get(id=request.user.id)
+        user = User.objects.select_related('profile', 'rating').get(id=request.user.id)
     except User.DoesNotExist:
         user = request.user
 
@@ -630,7 +622,7 @@ def profile(request):
     progress_percentage = rating.get_progress_percentage()
 
     # Отладочный вывод
-    print(f"DEBUG - Рейтинг: {rating.numeric_rating}, Уровень: {rating.level}, Прогресс: {progress_percentage}%")
+    logger.debug(f"Rating debug - numeric: {rating.numeric_rating}, level: {rating.level}, progress: {progress_percentage}%")
 
     # Также получаем границы диапазона для текущего уровня
     range_min = rating.get_range_min()
@@ -768,7 +760,6 @@ def notifications_list(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def mark_notification_read(request):
     """AJAX пометить уведомление как прочитанное"""
@@ -802,7 +793,7 @@ def mark_notification_read(request):
             })
 
     except Exception as e:
-        print(f"Ошибка при отметке уведомления: {str(e)}")
+        logger.error(f"Notification mark error: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Ошибка сервера: {str(e)}'
@@ -810,7 +801,6 @@ def mark_notification_read(request):
 
 
 @require_POST
-@csrf_exempt
 @login_required
 def mark_all_notifications_read(request):
     """AJAX пометить все уведомления как прочитанные"""
@@ -830,7 +820,7 @@ def mark_all_notifications_read(request):
         })
 
     except Exception as e:
-        print(f"Ошибка при отметке всех уведомлений: {str(e)}")
+        logger.error(f"Mark all notifications error: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Ошибка сервера: {str(e)}'

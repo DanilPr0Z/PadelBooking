@@ -4,19 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d1754e3-8f8c-4a4b-97dd-0341b3fd3117" name="Changes" comment="1.8">
+    <list default="true" id="5d1754e3-8f8c-4a4b-97dd-0341b3fd3117" name="Changes" comment="1.9">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/booking/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/booking/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/booking/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/booking/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/booking/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paddle_booking/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/paddle_booking/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/static/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/static/css/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/js/profile.js" beforeDir="false" afterPath="$PROJECT_DIR$/static/js/profile.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/booking.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/booking.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/partials/modals.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/partials/modals.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/partials/navbar.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/partials/navbar.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/users/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/users/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/users/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/signals.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/signals.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/users/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -68,6 +71,8 @@
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.clean_duplicates.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_coach_group.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_test_coaches.executor&quot;: &quot;Run&quot;,
     &quot;Python.create_test_courts.executor&quot;: &quot;Run&quot;,
     &quot;Python.forms.executor&quot;: &quot;Run&quot;,
     &quot;Python.reset_database.executor&quot;: &quot;Run&quot;,
@@ -105,7 +110,7 @@
     </key>
   </component>
   <component name="RunManager" selected="Python.reset_database">
-    <configuration name="clean_duplicates" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="create_coach_group" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="paddle_booking" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -114,11 +119,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$$PROJECT_DIR$/../../../management/commands" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/booking/management/commands/clean_duplicates.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$$PROJECT_DIR$/../../../management/commands/create_coach_group.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -127,7 +132,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="create_test_courts" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="create_test_coaches" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="paddle_booking" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -140,7 +145,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/booking/management/commands/create_test_courts.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/booking/management/commands/create_test_coaches.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -218,6 +223,8 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.reset_database" />
+        <item itemvalue="Python.create_test_coaches" />
+        <item itemvalue="Python.create_coach_group" />
       </list>
     </recent_temporary>
   </component>
@@ -318,7 +325,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768466747692</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="1.9">
+      <option name="closed" value="true" />
+      <created>1768500214192</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1768500214192</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -360,7 +375,8 @@
     <MESSAGE value="1.6" />
     <MESSAGE value="1.7" />
     <MESSAGE value="1.8" />
-    <option name="LAST_COMMIT_MESSAGE" value="1.8" />
+    <MESSAGE value="1.9" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.9" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

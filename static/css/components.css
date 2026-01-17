@@ -1,0 +1,1060 @@
+/* ============================================
+   ПЕРЕИСПОЛЬЗУЕМЫЕ UI КОМПОНЕНТЫ
+   ============================================ */
+
+/* ==================== BADGE/СТАТУСЫ ==================== */
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.status-badge.pending {
+    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+}
+
+.status-badge.pending.pulse {
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 3px 20px rgba(255, 152, 0, 0.6);
+        transform: scale(1.05);
+    }
+}
+
+.status-badge.confirmed {
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+}
+
+.status-badge.cancelled {
+    background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(244, 67, 54, 0.3);
+}
+
+.status-badge.training {
+    background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+}
+
+.status-badge.game {
+    background: linear-gradient(135deg, #9c27b0 0%, #6a1b9a 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(156, 39, 176, 0.3);
+}
+
+/* ==================== TOAST NOTIFICATIONS ==================== */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+}
+
+.toast-notification {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    animation: slideInRight 0.4s ease;
+    display: flex;
+    align-items: flex-start;
+    padding: 16px;
+    gap: 12px;
+    position: relative;
+    border-left: 5px solid #9ef01a;
+}
+
+.toast-notification.success {
+    border-left-color: #4caf50;
+}
+
+.toast-notification.error {
+    border-left-color: #f44336;
+}
+
+.toast-notification.warning {
+    border-left-color: #ff9800;
+}
+
+.toast-notification.info {
+    border-left-color: #2196f3;
+}
+
+.toast-notification i {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.toast-notification.success i {
+    color: #4caf50;
+}
+
+.toast-notification.error i {
+    color: #f44336;
+}
+
+.toast-notification.warning i {
+    color: #ff9800;
+}
+
+.toast-notification.info i {
+    color: #2196f3;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-content strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 15px;
+    color: #1a1a1a;
+}
+
+.toast-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background: rgba(0,0,0,0.05);
+    color: #333;
+}
+
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #9ef01a, #bff167);
+    width: 100%;
+    animation: toast-progress 5s linear;
+}
+
+.toast-notification.success .toast-progress {
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+}
+
+.toast-notification.error .toast-progress {
+    background: linear-gradient(90deg, #f44336, #ef5350);
+}
+
+@keyframes toast-progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ==================== SKELETON LOADERS ==================== */
+.skeleton-loader {
+    padding: 20px;
+}
+
+.skeleton-line {
+    height: 16px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
+.skeleton-line.medium {
+    width: 80%;
+}
+
+.skeleton-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Скелетоны для карточек кортов */
+.skeleton-court {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 12px;
+    padding: 22px;
+    height: 140px;
+    margin-bottom: 20px;
+}
+
+.skeleton-court-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.skeleton-court-title {
+    width: 120px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+}
+
+.skeleton-court-price {
+    width: 80px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+}
+
+.skeleton-court-desc {
+    width: 100%;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-court-desc.short {
+    width: 70%;
+}
+
+/* Скелетоны для временных слотов */
+.skeleton-slot {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 12px;
+    height: 56px;
+    margin-bottom: 15px;
+}
+
+/* Темная тема для скелетонов */
+:root[data-theme="dark"] .skeleton-line,
+:root[data-theme="dark"] .skeleton-circle,
+:root[data-theme="dark"] .skeleton-court,
+:root[data-theme="dark"] .skeleton-slot {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    background-size: 200% 100%;
+}
+
+:root[data-theme="dark"] .skeleton-court-title,
+:root[data-theme="dark"] .skeleton-court-price,
+:root[data-theme="dark"] .skeleton-court-desc {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== 3D CARD EFFECTS ==================== */
+.card-3d {
+    position: relative;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+    transform: rotateY(5deg) rotateX(-3deg);
+}
+
+.card-3d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, rgba(158, 240, 26, 0.2), transparent);
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.card-3d:hover::before {
+    opacity: 1;
+}
+
+/* ==================== FLIP CARDS (для тренеров) ==================== */
+.flip-card {
+    perspective: 1000px;
+    width: 100%;
+    height: 350px;
+    cursor: pointer;
+}
+
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s;
+    transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner,
+.flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.flip-card-front {
+    background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+}
+
+.flip-card-back {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    transform: rotateY(180deg);
+}
+
+.flip-card-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    object-fit: cover;
+    border: 5px solid var(--primary-color);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.flip-card-front h3 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: 700;
+}
+
+.flip-card-front .rating {
+    font-size: 18px;
+    color: #ff9800;
+    margin-bottom: 10px;
+}
+
+.flip-card-front .price {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--secondary-color);
+    background: rgba(158, 240, 26, 0.15);
+    padding: 8px 20px;
+    border-radius: 20px;
+    margin-top: 10px;
+}
+
+.flip-card-back h4 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.flip-card-back p {
+    margin: 12px 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.flip-card-back p i {
+    font-size: 18px;
+}
+
+.flip-card-back .btn-select-coach {
+    margin-top: 20px;
+    padding: 12px 30px;
+    background: white;
+    color: var(--primary-dark);
+    border: none;
+    border-radius: 25px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 16px;
+}
+
+.flip-card-back .btn-select-coach:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Темная тема для flip cards */
+:root[data-theme="dark"] .flip-card-front {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+}
+
+:root[data-theme="dark"] .flip-card-front h3 {
+    color: var(--text-color);
+}
+
+/* Адаптивность flip cards */
+@media (max-width: 768px) {
+    .flip-card {
+        height: 320px;
+    }
+
+    .flip-card-avatar {
+        width: 100px;
+        height: 100px;
+    }
+
+    .flip-card-front h3,
+    .flip-card-back h4 {
+        font-size: 20px;
+    }
+
+    .flip-card-back p {
+        font-size: 14px;
+    }
+}
+
+/* ==================== ПРОГРЕСС-БАРЫ ==================== */
+.progress-bar {
+    width: 100%;
+    height: 30px;
+    background: #f0f0f0;
+    border-radius: 15px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    border-radius: 15px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 700;
+    font-size: 14px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: 1;
+}
+
+/* ==================== ГРАДИЕНТНЫЕ КНОПКИ ==================== */
+.btn-gradient {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    color: var(--dark-color);
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.btn-gradient:hover::before {
+    left: 100%;
+}
+
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(158, 240, 26, 0.3);
+}
+
+/* Ripple effect */
+.btn-ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* ==================== FLIP CARDS ==================== */
+.flip-card {
+    perspective: 1000px;
+    width: 250px;
+    height: 320px;
+}
+
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s;
+    transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.flip-card-front {
+    background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%);
+    border: 2px solid #eee;
+}
+
+.flip-card-back {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    transform: rotateY(180deg);
+}
+
+.flip-card-front img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    border: 4px solid var(--primary-color);
+}
+
+.flip-card-front h3 {
+    margin: 10px 0 5px;
+    font-size: 20px;
+    color: var(--dark-color);
+}
+
+.flip-card-front p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 16px;
+}
+
+.flip-card-back h4 {
+    margin: 0 0 15px;
+    font-size: 18px;
+}
+
+.flip-card-back p {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.flip-card-back button {
+    margin-top: 20px;
+    padding: 10px 25px;
+    background: white;
+    color: var(--secondary-color);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.flip-card-back button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* ==================== МИКРО-АНИМАЦИИ ==================== */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.error-shake {
+    animation: shake 0.5s;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.success-bounce {
+    animation: bounce 0.6s;
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+.wiggle {
+    animation: wiggle 0.5s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* ==================== МОДАЛЬНЫЕ ОКНА С BACKDROP BLUR ==================== */
+.modal-modern .modal-backdrop {
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-modern .modal-content {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== АДАПТИВНОСТЬ ==================== */
+@media (max-width: 768px) {
+    .toast-container {
+        left: 10px;
+        right: 10px;
+        top: 10px;
+        max-width: none;
+    }
+
+    .flip-card {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .card-3d:hover {
+        transform: none;
+    }
+
+    .card-3d:active {
+        transform: scale(0.98);
+    }
+}
+
+/* ==================== СЧЕТЧИК С АНИМАЦИЕЙ ==================== */
+.animated-counter {
+    font-size: 48px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ==================== ИНФОРМАЦИОННЫЕ КАРТОЧКИ ==================== */
+.info-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    border-color: var(--primary-light);
+}
+
+.info-card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.info-card-icon i {
+    font-size: 28px;
+    color: white;
+}
+
+.info-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--secondary-color);
+}
+
+.info-card-text {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+}
+
+/* ==================== МИКРО-АНИМАЦИИ ==================== */
+
+/* Shake анимация - для ошибок */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.shake {
+    animation: shake 0.5s;
+}
+
+.error-shake {
+    animation: shake 0.5s;
+}
+
+/* Bounce анимация - для успеха */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-20px); }
+    50% { transform: translateY(-10px); }
+    75% { transform: translateY(-15px); }
+}
+
+.bounce {
+    animation: bounce 0.6s;
+}
+
+.success-bounce {
+    animation: bounce 0.6s;
+}
+
+/* Wiggle анимация - для привлечения внимания */
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+    75% { transform: rotate(-3deg); }
+}
+
+.wiggle {
+    animation: wiggle 0.5s;
+}
+
+/* Pulse анимация - для кнопок и важных элементов */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 1s infinite;
+}
+
+/* Fade In анимация */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Zoom In анимация */
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.zoom-in {
+    animation: zoomIn 0.3s ease-out;
+}
+
+/* Rotate In анимация */
+@keyframes rotateIn {
+    from {
+        opacity: 0;
+        transform: rotate(-180deg) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+    }
+}
+
+.rotate-in {
+    animation: rotateIn 0.5s ease-out;
+}
+
+/* Slide In Right */
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInFromRight 0.4s ease-out;
+}
+
+/* Slide In Left */
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-left {
+    animation: slideInFromLeft 0.4s ease-out;
+}
+
+/* Flash анимация - быстрое привлечение внимания */
+@keyframes flash {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0; }
+}
+
+.flash {
+    animation: flash 1s;
+}
+
+/* Heartbeat анимация */
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    10%, 30% { transform: scale(0.9); }
+    20%, 40% { transform: scale(1.1); }
+}
+
+.heartbeat {
+    animation: heartbeat 1.3s ease-in-out infinite;
+}
+
+/* Применение анимаций к классам элементов */
+.animated {
+    animation-duration: 1s;
+    animation-fill-mode: both;
+}
+
+.animated.fast {
+    animation-duration: 0.5s;
+}
+
+.animated.slow {
+    animation-duration: 2s;
+}
+
+/* ==================== ТЕМНАЯ ТЕМА ДЛЯ КОМПОНЕНТОВ ==================== */
+:root[data-theme="dark"] .info-card {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .info-card-title {
+    color: var(--primary-color);
+}
+
+:root[data-theme="dark"] .info-card-text {
+    color: var(--gray-color);
+}
+
+:root[data-theme="dark"] .modal-modern .modal-content {
+    background: rgba(30, 30, 30, 0.98);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .progress-bar {
+    background: #2a2a2a;
+}
+
+/* ==================== COURT OCCUPANCY PROGRESS BAR ==================== */
+.court-occupancy {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(158, 240, 26, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(158, 240, 26, 0.2);
+}
+
+.court-occupancy-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.occupancy-percent {
+    color: var(--secondary-color);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.court-occupancy .progress-bar {
+    height: 8px;
+    border-radius: 10px;
+}
+
+.court-occupancy .progress-fill {
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Цвета прогресс-баров в зависимости от загруженности */
+.occupancy-low .progress-fill {
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+}
+
+.occupancy-medium .progress-fill {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+}
+
+.occupancy-high .progress-fill {
+    background: linear-gradient(90deg, #f44336, #ef5350);
+}
+
+:root[data-theme="dark"] .court-occupancy {
+    background: rgba(158, 240, 26, 0.1);
+    border-color: rgba(158, 240, 26, 0.3);
+}
+
+:root[data-theme="dark"] .court-occupancy-label {
+    color: var(--gray-color);
+}

@@ -21,12 +21,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300); // Увеличим задержку для надежности
     }
 
-    // Проверяем hash в URL для открытия вкладки рейтинга
+    // Проверяем hash в URL для открытия нужной вкладки
     if (window.location.hash === '#rating') {
         setTimeout(() => {
             const ratingTabBtn = document.querySelector('.tab-btn[data-tab="rating"]');
             if (ratingTabBtn && !ratingTabBtn.classList.contains('active')) {
                 ratingTabBtn.click();
+            }
+        }, 300);
+    } else if (window.location.hash === '#statistics') {
+        setTimeout(() => {
+            const statisticsTabBtn = document.querySelector('.tab-btn[data-tab="statistics"]');
+            if (statisticsTabBtn && !statisticsTabBtn.classList.contains('active')) {
+                statisticsTabBtn.click();
             }
         }, 300);
     }
@@ -134,6 +141,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
             <button class="tab-btn" data-tab="bookings">
                 <i class="fas fa-calendar"></i> Мои записи
+            </button>
+            <button class="tab-btn" data-tab="statistics">
+                <i class="fas fa-chart-bar"></i> Моя статистика
             </button>
             <button class="tab-btn" data-tab="rating">
                 <i class="fas fa-chart-line"></i> Мой рейтинг
@@ -382,6 +392,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         <a href="{% url 'booking' %}" class="btn-primary">Перейти к бронированию</a>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Вкладка "Моя статистика" -->
+        <div id="statistics-tab" class="tab-content">
+            <div class="statistics-header">
+                <h2>Моя статистика</h2>
+                <p style="color: #666; margin-top: 10px;">Полный анализ вашей игровой активности</p>
+            </div>
+            <div class="statistics-iframe-container">
+                <iframe id="statistics-iframe" src="{% url 'player_statistics' %}"
+                        style="width: 100%; min-height: 800px; border: none; border-radius: 12px; background: white;">
+                </iframe>
             </div>
         </div>
 
@@ -3183,6 +3206,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const activeContent = document.getElementById(`${tabId}-tab`);
             if (activeContent) {
                 activeContent.classList.add('active');
+
+                    // Загружаем iframe статистики только при первой активации
+                if (tabId === 'statistics') {
+                    const iframe = document.getElementById('statistics-iframe');
+                    if (iframe && !iframe.dataset.loaded) {
+                        iframe.dataset.loaded = 'true';
+                        // iframe уже имеет src, просто отмечаем что он загружен
+                    }
+                }
 
                 // ФИКС: Сбрасываем прогресс бар к правильной ширине
                 if (tabId === 'rating') {

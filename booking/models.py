@@ -8,7 +8,7 @@ from django.dispatch import receiver
 
 class Court(models.Model):
     name = models.CharField(max_length=100)
-    today_bookings_count = models.IntegerField(default=0, verbose_name='Бронирований сегодня')
+    # УДАЛЕНО: today_bookings_count - не использовалось в коде
     description = models.TextField()
     price_per_hour = models.DecimalField(max_digits=10, decimal_places=2)
     is_available = models.BooleanField(default=True)
@@ -36,6 +36,20 @@ class Booking(models.Model):
         ('cancelled', 'Отменено'),
     ], default='pending')
     confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    # Тип бронирования
+    BOOKING_TYPE_CHOICES = [
+        ('game', 'Игра'),
+        ('training', 'Тренировка'),
+    ]
+    booking_type = models.CharField(
+        max_length=20,
+        choices=BOOKING_TYPE_CHOICES,
+        default='game',
+        verbose_name='Тип бронирования',
+        help_text='Игра или тренировка',
+        db_index=True
+    )
 
     # Новые поля для партнёров и тренера
     partners = models.ManyToManyField(
@@ -80,6 +94,11 @@ class Booking(models.Model):
             models.Index(fields=['date', 'start_time']),
             models.Index(fields=['status']),
             models.Index(fields=['looking_for_partner', 'date']),
+            # Новые индексы для оптимизации
+            models.Index(fields=['user', 'date']),  # Поиск бронирований пользователя на дату
+            models.Index(fields=['coach', 'date']),  # Поиск тренировок по тренеру
+            models.Index(fields=['booking_type']),  # Фильтрация по типу бронирования
+            models.Index(fields=['booking_type', 'date']),  # Поиск игр/тренировок по дате
         ]
 
     def __str__(self):
@@ -151,7 +170,7 @@ class Booking(models.Model):
                 user_rating = user.rating.level
                 if user_rating != self.required_rating_level:
                     return False, f"Требуемый уровень: {self.required_rating_level}, ваш: {user_rating}"
-            except:
+            except (AttributeError, self.__class__.DoesNotExist):
                 return False, "У вас нет рейтинга"
 
         return True, "OK"
@@ -300,6 +319,8 @@ class Payment(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['transaction_id']),
             models.Index(fields=['created_at']),
+            # Новый индекс для оптимизации
+            models.Index(fields=['booking', 'status']),  # Проверка платежей по бронированию
         ]
 
     def __str__(self):
@@ -454,6 +475,8 @@ class BookingInvitation(models.Model):
             models.Index(fields=['invitee', 'status']),
             models.Index(fields=['booking', 'status']),
             models.Index(fields=['invitee_phone']),
+            # Новый индекс для оптимизации
+            models.Index(fields=['inviter', 'created_at']),  # Поиск отправленных приглашений
         ]
         # Нельзя приглашать одного и того же человека дважды в одно бронирование
         unique_together = [('booking', 'invitee_phone')]

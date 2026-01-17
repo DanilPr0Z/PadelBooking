@@ -7,7 +7,6 @@ from .models import UserProfile
 import re
 import os
 
-
 class EmailUpdateForm(forms.ModelForm):
     email = forms.EmailField(
         required=True,
@@ -152,79 +151,37 @@ class RegistrationForm(UserCreationForm):
         self.fields['password2'].required = True
 
     def clean_phone(self):
-        """Строгая проверка телефона с нормализацией"""
+        from .utils import normalize_phone
+
         phone = self.cleaned_data.get('phone', '').strip()
 
         if not phone:
-            raise ValidationError('Номер телефона обязателен для заполнения')
+            raise ValidationError('Номер телефона обязателен')
 
-        # Сохраняем оригинал для сообщений об ошибке
-        original_phone = phone
+        # Нормализуем телефон используя утилиту
+        try:
+            formatted_phone = normalize_phone(phone)
+        except ValidationError as e:
+            raise ValidationError(f'Некорректный номер телефона: {e}')
 
-        # Удаляем все нецифровые символы
-        phone_digits = re.sub(r'\D', '', phone)
+        # Извлекаем цифры для проверки других форматов
+        phone_digits = formatted_phone[1:]  # Убираем +
 
-        if not phone_digits:
-            raise ValidationError('Введите корректный номер телефона')
+        # Проверка уникальности (исключая текущего пользователя)
+        if self.instance and hasattr(self.instance, 'profile'):
+            # Проверяем все форматы
+            other_formats = [
+                formatted_phone,
+                '8' + phone_digits[1:],
+                phone_digits,
+                phone_digits[1:],
+            ]
 
-        # Проверяем длину
-        if len(phone_digits) < 10:
-            raise ValidationError('Номер слишком короткий. Минимум 10 цифр.')
-
-        if len(phone_digits) > 11:
-            raise ValidationError('Номер слишком длинный. Максимум 11 цифр.')
-
-        # Нормализуем номер к формату +7XXXXXXXXXX
-        if len(phone_digits) == 10 and phone_digits.startswith('9'):
-            # Формат: 9123456789 -> +79123456789
-            phone_digits = '7' + phone_digits
-        elif len(phone_digits) == 11 and phone_digits.startswith('8'):
-            # Формат: 89123456789 -> +79123456789
-            phone_digits = '7' + phone_digits[1:]
-        elif len(phone_digits) == 10:
-            # Формат: 1234567890 -> +71234567890 (но это не российский)
-            phone_digits = '7' + phone_digits
-        elif len(phone_digits) == 11 and not phone_digits.startswith('7'):
-            # Если 11 цифр но не начинается с 7, добавляем 7 в начало
-            if phone_digits.startswith('8'):
-                phone_digits = '7' + phone_digits[1:]
-            else:
-                phone_digits = '7' + phone_digits
-
-        # Теперь должно быть 11 цифр и начинаться с 7
-        if len(phone_digits) != 11 or not phone_digits.startswith('7'):
-            raise ValidationError('Российский номер телефона должен содержать 11 цифр и начинаться с +7')
-
-        formatted_phone = '+' + phone_digits
-
-        # СТРОГАЯ проверка уникальности
-        # 1. Проверяем точное совпадение
-        if UserProfile.objects.filter(phone=formatted_phone).exists():
-            existing = UserProfile.objects.get(phone=formatted_phone)
-            raise ValidationError(f'Номер телефона уже используется пользователем {existing.user.username}')
-
-        # 2. Проверяем другие форматы этого же номера
-        other_formats = [
-            '8' + phone_digits[1:],  # 89123456789
-            phone_digits,  # 79123456789
-            phone_digits[1:],  # 9123456789
-            '7' + phone_digits[1:],  # 79123456789 (дубль)
-        ]
-
-        # Убираем дубликаты
-        other_formats = list(set(other_formats))
-
-        for fmt in other_formats:
-            if fmt != formatted_phone and UserProfile.objects.filter(phone=fmt).exists():
-                existing = UserProfile.objects.get(phone=fmt)
-                raise ValidationError(
-                    f'Этот номер телефона (в формате {fmt}) уже используется пользователем {existing.user.username}')
-
-        # 3. Проверяем нормализованные версии существующих номеров
-        for profile in UserProfile.objects.exclude(phone__isnull=True).exclude(phone=''):
-            existing_normalized = UserProfile.objects.normalize_phone(profile.phone)
-            if existing_normalized == formatted_phone:
-                raise ValidationError(f'Этот номер телефона уже используется пользователем {profile.user.username}')
+            for fmt in other_formats:
+                qs = UserProfile.objects.filter(phone=fmt).exclude(user=self.instance)
+                if qs.exists():
+                    users = [p.user.username for p in qs]
+                    raise ValidationError(f'Этот номер телефона уже используется: {", ".join(users)}')
 
         return formatted_phone
 
@@ -506,30 +463,21 @@ class ProfileUpdateForm(forms.ModelForm):
         self.fields['email'].required = True
 
     def clean_phone(self):
+        from .utils import normalize_phone
+
         phone = self.cleaned_data.get('phone', '').strip()
 
         if not phone:
             raise ValidationError('Номер телефона обязателен')
 
-        # Используем ту же логику нормализации, что и в RegistrationForm
-        phone_digits = re.sub(r'\D', '', phone)
+        # Нормализуем телефон используя утилиту
+        try:
+            formatted_phone = normalize_phone(phone)
+        except ValidationError as e:
+            raise ValidationError(f'Некорректный номер телефона: {e}')
 
-        if not phone_digits:
-            raise ValidationError('Введите корректный номер телефона')
-
-        if len(phone_digits) < 10 or len(phone_digits) > 11:
-            raise ValidationError('Номер телефона должен содержать 10-11 цифр')
-
-        # Нормализуем
-        if len(phone_digits) == 10:
-            phone_digits = '7' + phone_digits
-        elif len(phone_digits) == 11 and phone_digits.startswith('8'):
-            phone_digits = '7' + phone_digits[1:]
-
-        if len(phone_digits) != 11 or not phone_digits.startswith('7'):
-            raise ValidationError('Российский номер должен содержать 11 цифр и начинаться с +7')
-
-        formatted_phone = '+' + phone_digits
+        # Извлекаем цифры для проверки других форматов
+        phone_digits = formatted_phone[1:]  # Убираем +
 
         # Проверка уникальности (исключая текущего пользователя)
         if self.instance and hasattr(self.instance, 'profile'):

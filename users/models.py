@@ -14,64 +14,30 @@ from PIL import Image
 import io
 from django.conf import settings
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UserProfileManager(models.Manager):
     def normalize_phone(self, phone):
-        """Нормализует номер телефона для сравнения"""
-        if not phone:
+        """
+        Нормализует номер телефона
+        DEPRECATED: Используйте users.utils.normalize_phone напрямую
+        """
+        from .utils import normalize_phone as normalize_phone_util
+        try:
+            return normalize_phone_util(phone)
+        except ValidationError:
             return None
-
-        # Убираем все нецифровые символы
-        digits = re.sub(r'\D', '', str(phone))
-
-        if not digits:
-            return None
-
-        # Нормализуем российский номер
-        if len(digits) == 10 and digits.startswith('9'):
-            digits = '7' + digits
-        elif len(digits) == 11 and digits.startswith('8'):
-            digits = '7' + digits[1:]
-        elif len(digits) == 10:
-            digits = '7' + digits
-
-        # Должно быть 11 цифр для российского номера
-        if len(digits) != 11:
-            return None
-
-        return '+' + digits
 
     def get_user_by_phone(self, phone):
-        """Найти пользователя по номеру телефона"""
-        # Нормализуем номер
-        normalized_phone = self.normalize_phone(phone)
-        if not normalized_phone:
-            return None
-
-        # Ищем профиль с таким номером
-        try:
-            profile = UserProfile.objects.get(phone=normalized_phone)
-            return profile.user
-        except UserProfile.DoesNotExist:
-            # Пробуем другие форматы
-            phone_digits = normalized_phone[1:]  # Убираем +
-
-            # Формат без + в начале
-            try:
-                profile = UserProfile.objects.get(phone=phone_digits)
-                return profile.user
-            except UserProfile.DoesNotExist:
-                pass
-
-            # Формат с 8 в начале
-            try:
-                profile = UserProfile.objects.get(phone='8' + phone_digits[1:])
-                return profile.user
-            except UserProfile.DoesNotExist:
-                pass
-
-        return None
+        """
+        Найти пользователя по номеру телефона
+        DEPRECATED: Используйте users.utils.get_user_by_phone напрямую
+        """
+        from .utils import get_user_by_phone as get_user_by_phone_util
+        return get_user_by_phone_util(phone)
 
 
 class UserProfile(models.Model):
@@ -115,6 +81,8 @@ class UserProfile(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['phone']),
+            # Новый индекс для оптимизации
+            models.Index(fields=['phone', 'user']),  # Ускорение get_user_by_phone
         ]
         constraints = [
             models.UniqueConstraint(
@@ -184,27 +152,21 @@ class UserProfile(models.Model):
         import random
         self.verification_code = f"{random.randint(100000, 999999)}"
         self.save()
-        print(
-            f"ГЕНЕРАЦИЯ КОДА: Для пользователя {self.user.username}, телефон {self.phone}, код: {self.verification_code}")
+        logger.info(f"Generated verification code for user {self.user.username}, phone {self.phone}: {self.verification_code}")
         return self.verification_code
 
     def verify_phone(self, code):
         """Подтверждение телефона"""
-        print(f"ПРОВЕРКА КОДА ДЛЯ {self.user.username}:")
-        print(f"  Введенный код: {code}")
-        print(f"  Код в БД: {self.verification_code}")
-        print(f"  Тип введенного: {type(code)}")
-        print(f"  Тип в БД: {type(self.verification_code)}")
-        print(f"  Совпадение: {str(self.verification_code) == str(code)}")
+        logger.debug(f"Phone verification attempt for {self.user.username}: code={code}, stored={self.verification_code}")
 
         if self.verification_code and str(self.verification_code) == str(code):
             self.phone_verified = True
             self.verification_code = None
             self.save()
-            print(f"  ✅ ТЕЛЕФОН ПОДТВЕРЖДЕН!")
+            logger.info(f"Phone verified successfully for {self.user.username}")
             return True
 
-        print(f"  ❌ НЕВЕРНЫЙ КОД!")
+        logger.warning(f"Invalid phone verification code for {self.user.username}")
         return False
 
     def generate_email_verification_code(self):
@@ -212,25 +174,21 @@ class UserProfile(models.Model):
         import random
         self.email_verification_code = f"{random.randint(100000, 999999)}"
         self.save()
-        print(
-            f"ГЕНЕРАЦИЯ КОДА EMAIL: Для пользователя {self.user.username}, email {self.user.email}, код: {self.email_verification_code}")
+        logger.info(f"Generated email verification code for user {self.user.username}, email {self.user.email}: {self.email_verification_code}")
         return self.email_verification_code
 
     def verify_email(self, code):
         """Подтверждение email"""
-        print(f"ПРОВЕРКА КОДА EMAIL ДЛЯ {self.user.username}:")
-        print(f"  Введенный код: {code}")
-        print(f"  Код в БД: {self.email_verification_code}")
-        print(f"  Совпадение: {str(self.email_verification_code) == str(code)}")
+        logger.debug(f"Email verification attempt for {self.user.username}: code={code}, stored={self.email_verification_code}")
 
         if self.email_verification_code and str(self.email_verification_code) == str(code):
             self.email_verified = True
             self.email_verification_code = None
             self.save()
-            print(f"  ✅ EMAIL ПОДТВЕРЖДЕН!")
+            logger.info(f"Email verified successfully for {self.user.username}")
             return True
 
-        print(f"  ❌ НЕВЕРНЫЙ КОД!")
+        logger.warning(f"Invalid email verification code for {self.user.username}")
         return False
 
     def save_avatar(self, image_file):
@@ -290,7 +248,7 @@ class UserProfile(models.Model):
             return True
 
         except Exception as e:
-            print(f"Ошибка при сохранении аватарки: {str(e)}")
+            logger.error(f"Avatar save error: {str(e)}")
             raise ValidationError(f'Ошибка при обработке изображения: {str(e)}')
 
     def get_avatar_url(self):
@@ -315,7 +273,7 @@ class UserProfile(models.Model):
                 self.save()
                 return True
             except Exception as e:
-                print(f"Ошибка при удалении аватарки: {str(e)}")
+                logger.error(f"Avatar deletion error: {str(e)}")
                 return False
         return False
 
@@ -362,7 +320,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         except Exception as e:
             # Если ошибка, логируем но не падаем
             import sys
-            print(f"Ошибка создания профиля для {instance.username}: {e}", file=sys.stderr)
+            logger.error(f"Profile creation error for {instance.username}: {e}")
 
 
 class PlayerRating(models.Model):
@@ -439,6 +397,10 @@ class PlayerRating(models.Model):
         verbose_name = 'Рейтинг игрока'
         verbose_name_plural = 'Рейтинги игроков'
         ordering = ['-numeric_rating']
+        indexes = [
+            # Новый индекс для оптимизации
+            models.Index(fields=['user', 'updated_at']),  # История обновлений рейтинга
+        ]
 
     def __str__(self):
         full_name = f"{self.user.first_name} {self.user.last_name}".strip()
@@ -702,6 +664,10 @@ class TrainingSession(models.Model):
         verbose_name = 'Тренировочная сессия'
         verbose_name_plural = 'Тренировочные сессии'
         ordering = ['-date', '-start_time']
+        indexes = [
+            # Новый индекс для оптимизации
+            models.Index(fields=['coach', 'date']),  # Поиск тренировок по тренеру
+        ]
 
     def __str__(self):
         coach_name = f"{self.coach.first_name} {self.coach.last_name}".strip() or self.coach.username
