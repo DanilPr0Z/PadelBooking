@@ -10,6 +10,7 @@ urlpatterns = [
 
                   # Кастомная админ-панель (требует staff права)
                   path('admin-panel/', include('users.admin_urls')),
+                  path('admin-panel/schedule/', include('booking.admin_urls')),
 
                   # Главная страница
                   path('', views.home, name='home'),

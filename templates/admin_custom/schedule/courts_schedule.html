@@ -1,0 +1,498 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Расписание кортов | Paddle Booking Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin_custom/css/schedule.css' %}">
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
+{% endblock %}
+
+{% block content %}
+<div class="schedule-container">
+    <!-- Заголовок и навигация -->
+    <div class="schedule-header">
+        <h1>📅 Расписание кортов</h1>
+
+        <div class="schedule-nav">
+            <a href="?week_start={{ prev_week }}" class="btn-nav">← Предыдущая неделя</a>
+            <span class="current-week">
+                {{ week_start|date:"d.m.Y" }} - {{ week_end|date:"d.m.Y" }}
+            </span>
+            <a href="?week_start={{ next_week }}" class="btn-nav">Следующая неделя →</a>
+        </div>
+
+        <div class="schedule-actions">
+            <button id="btnRefresh" class="btn-action" onclick="refreshCalendar()">
+                🔄 Обновить
+            </button>
+            <button id="btnToday" class="btn-action" onclick="goToToday()">
+                📍 Сегодня
+            </button>
+            <button id="btnCreateBooking" class="btn-action btn-primary" onclick="openQuickCreateModal()">
+                ➕ Создать бронирование
+            </button>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="schedule-filters">
+        <label>
+            Статус:
+            <select id="filterStatus" onchange="applyFilters()">
+                <option value="">Все</option>
+                <option value="pending">В ожидании</option>
+                <option value="confirmed">Подтверждено</option>
+                <option value="cancelled">Отменено</option>
+            </select>
+        </label>
+
+        <label>
+            Корт:
+            <select id="filterCourt" onchange="applyFilters()">
+                <option value="">Все корты</option>
+                {% for court in courts %}
+                <option value="{{ court.id }}">{{ court.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <!-- Календарь -->
+    <div id="calendar"></div>
+
+    <!-- Модальное окно быстрого создания -->
+    <div id="quickCreateModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeQuickCreateModal()">&times;</span>
+            <h2>Создать бронирование</h2>
+
+            <form id="quickCreateForm">
+                <div class="form-group">
+                    <label>Пользователь *</label>
+                    <input type="text" id="searchUser" placeholder="Начните вводить имя..." autocomplete="off">
+                    <input type="hidden" id="userId" required>
+                    <div id="userSuggestions" class="suggestions"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Корт *</label>
+                    <select id="courtId" required>
+                        <option value="">Выберите корт</option>
+                        {% for court in courts %}
+                        <option value="{{ court.id }}">{{ court.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Дата *</label>
+                        <input type="date" id="bookingDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Начало *</label>
+                        <input type="time" id="startTime" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Конец *</label>
+                        <input type="time" id="endTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="bookingStatus">
+                        <option value="confirmed">Подтверждено</option>
+                        <option value="pending">В ожидании</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeQuickCreateModal()">Отмена</button>
+                    <button type="submit" class="btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно деталей бронирования -->
+    <div id="bookingDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeDetailsModal()">&times;</span>
+            <h2>Детали бронирования #<span id="detailsBookingId"></span></h2>
+
+            <div id="bookingDetailsContent">
+                <!-- Динамически заполняется -->
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-danger" onclick="cancelBooking()">Отменить бронирование</button>
+                <button class="btn-secondary" onclick="closeDetailsModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast уведомления -->
+    <div id="toast" class="toast"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/resource-timeline@6.1.9/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.9/index.global.min.js"></script>
+<script>
+// Данные из Django
+const courts = {{ courts|safe }};
+const weekStart = '{{ week_start|date:"Y-m-d" }}';
+const weekEnd = '{{ week_end|date:"Y-m-d" }}';
+
+// CSRF Token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Calendar instance
+let calendar;
+
+// Инициализация календаря
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+
+    // Преобразуем корты в ресурсы
+    const resources = [
+        {% for court in courts %}
+        {
+            id: '{{ court.id }}',
+            title: '{{ court.name }}'
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'resourceTimelineWeek',
+        schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
+        locale: 'ru',
+        firstDay: 1,  // Понедельник
+        slotMinTime: '08:00:00',
+        slotMaxTime: '22:00:00',
+        slotDuration: '01:00:00',
+        height: 'auto',
+
+        resources: resources,
+
+        headerToolbar: {
+            left: '',
+            center: '',
+            right: ''
+        },
+
+        // Источник событий
+        events: async function(info, successCallback, failureCallback) {
+            try {
+                const params = new URLSearchParams({
+                    start: info.startStr.split('T')[0],
+                    end: info.endStr.split('T')[0]
+                });
+
+                // Применяем фильтры
+                const statusFilter = document.getElementById('filterStatus').value;
+                const courtFilter = document.getElementById('filterCourt').value;
+
+                if (statusFilter) params.append('status', statusFilter);
+                if (courtFilter) params.append('court_id', courtFilter);
+
+                const response = await fetch(`/admin-panel/schedule/api/bookings/?${params}`);
+                if (!response.ok) throw new Error('Failed to fetch bookings');
+
+                const events = await response.json();
+                successCallback(events);
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                failureCallback(error);
+                showToast('Ошибка загрузки бронирований', 'error');
+            }
+        },
+
+        // Drag and drop
+        editable: true,
+        eventResizableFromStart: true,
+
+        // Обработчик перемещения события
+        eventDrop: async function(info) {
+            await updateBooking(info.event);
+        },
+
+        // Обработчик изменения длительности
+        eventResize: async function(info) {
+            await updateBooking(info.event);
+        },
+
+        // Клик по событию - показать детали
+        eventClick: function(info) {
+            showBookingDetails(info.event);
+        },
+
+        // Клик по пустой ячейке - создать бронирование
+        dateClick: function(info) {
+            openQuickCreateModal(info.dateStr, info.resource?.id);
+        }
+    });
+
+    calendar.render();
+});
+
+// Обновить бронирование (drag-and-drop)
+async function updateBooking(event) {
+    try {
+        const bookingId = event.extendedProps.booking_id;
+
+        const data = {
+            date: event.start.toISOString().split('T')[0],
+            start_time: event.start.toTimeString().substring(0, 5),
+            end_time: event.end.toTimeString().substring(0, 5),
+            court_id: event.getResources()[0]?.id
+        };
+
+        const response = await fetch(`/admin-panel/schedule/api/booking/${bookingId}/update/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка обновления');
+        }
+
+        showToast('Бронирование обновлено', 'success');
+    } catch (error) {
+        console.error('Error updating booking:', error);
+        showToast(error.message, 'error');
+        calendar.refetchEvents();  // Откатываем изменения
+    }
+}
+
+// Показать детали бронирования
+function showBookingDetails(event) {
+    const modal = document.getElementById('bookingDetailsModal');
+    const content = document.getElementById('bookingDetailsContent');
+    const props = event.extendedProps;
+
+    document.getElementById('detailsBookingId').textContent = props.booking_id;
+
+    content.innerHTML = `
+        <div class="details-grid">
+            <div class="detail-item">
+                <label>Пользователь:</label>
+                <span>${props.user_name}</span>
+            </div>
+            <div class="detail-item">
+                <label>Корт:</label>
+                <span>${props.court_name}</span>
+            </div>
+            <div class="detail-item">
+                <label>Дата:</label>
+                <span>${event.start.toLocaleDateString('ru-RU')}</span>
+            </div>
+            <div class="detail-item">
+                <label>Время:</label>
+                <span>${event.start.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})} - ${event.end.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
+            </div>
+            <div class="detail-item">
+                <label>Статус:</label>
+                <span class="status-badge status-${props.status}">${getStatusLabel(props.status)}</span>
+            </div>
+            <div class="detail-item">
+                <label>Стоимость:</label>
+                <span>${props.total_price} ₽</span>
+            </div>
+            ${props.coach_name ? `
+            <div class="detail-item">
+                <label>Тренер:</label>
+                <span>${props.coach_name}</span>
+            </div>
+            ` : ''}
+            ${props.partners_count > 0 ? `
+            <div class="detail-item">
+                <label>Партнеров:</label>
+                <span>${props.partners_count}</span>
+            </div>
+            ` : ''}
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+    modal.dataset.bookingId = props.booking_id;
+}
+
+function closeDetailsModal() {
+    document.getElementById('bookingDetailsModal').style.display = 'none';
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'pending': 'В ожидании',
+        'confirmed': 'Подтверждено',
+        'cancelled': 'Отменено',
+        'completed': 'Завершено'
+    };
+    return labels[status] || status;
+}
+
+// Отменить бронирование
+async function cancelBooking() {
+    const modal = document.getElementById('bookingDetailsModal');
+    const bookingId = modal.dataset.bookingId;
+
+    if (!confirm('Вы уверены, что хотите отменить это бронирование?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/admin-panel/schedule/api/booking/${bookingId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка отмены');
+        }
+
+        showToast('Бронирование отменено', 'success');
+        closeDetailsModal();
+        calendar.refetchEvents();
+    } catch (error) {
+        console.error('Error cancelling booking:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// Открыть модальное окно создания
+function openQuickCreateModal(dateStr, resourceId) {
+    const modal = document.getElementById('quickCreateModal');
+    const form = document.getElementById('quickCreateForm');
+
+    // Заполняем значения по умолчанию
+    if (dateStr) {
+        const date = new Date(dateStr);
+        document.getElementById('bookingDate').value = date.toISOString().split('T')[0];
+        document.getElementById('startTime').value = date.toTimeString().substring(0, 5);
+
+        // Конец на 1 час позже
+        date.setHours(date.getHours() + 1);
+        document.getElementById('endTime').value = date.toTimeString().substring(0, 5);
+    }
+
+    if (resourceId) {
+        document.getElementById('courtId').value = resourceId;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeQuickCreateModal() {
+    document.getElementById('quickCreateModal').style.display = 'none';
+    document.getElementById('quickCreateForm').reset();
+}
+
+// Обработчик отправки формы создания
+document.getElementById('quickCreateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const userId = document.getElementById('userId').value;
+    if (!userId) {
+        showToast('Выберите пользователя', 'error');
+        return;
+    }
+
+    const data = {
+        user_id: userId,
+        court_id: document.getElementById('courtId').value,
+        date: document.getElementById('bookingDate').value,
+        start_time: document.getElementById('startTime').value,
+        end_time: document.getElementById('endTime').value,
+        status: document.getElementById('bookingStatus').value
+    };
+
+    try {
+        const response = await fetch('/admin-panel/schedule/api/booking/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка создания');
+        }
+
+        const result = await response.json();
+        showToast('Бронирование создано', 'success');
+        closeQuickCreateModal();
+        calendar.refetchEvents();
+    } catch (error) {
+        console.error('Error creating booking:', error);
+        showToast(error.message, 'error');
+    }
+});
+
+// Поиск пользователя (простой пример - можно расширить с AJAX)
+document.getElementById('searchUser').addEventListener('input', function(e) {
+    // TODO: Implement user search with AJAX
+    // For now, just a placeholder
+});
+
+// Применить фильтры
+function applyFilters() {
+    calendar.refetchEvents();
+}
+
+// Обновить календарь
+function refreshCalendar() {
+    calendar.refetchEvents();
+    showToast('Обновлено', 'success');
+}
+
+// Перейти к сегодня
+function goToToday() {
+    window.location.href = '/admin-panel/schedule/courts/';
+}
+
+// Toast уведомления
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast toast-${type} toast-show`;
+
+    setTimeout(() => {
+        toast.className = 'toast';
+    }, 3000);
+}
+</script>
+{% endblock %}
