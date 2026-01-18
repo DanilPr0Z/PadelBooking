@@ -972,17 +972,35 @@ def api_available_slots(request):
 def player_statistics(request):
     """Страница со статистикой игрока"""
     try:
+        import json
         stats = get_player_stats(request.user)
-        
+
+        # Сериализуем данные для JavaScript
+        # Преобразуем QuerySet и datetime объекты в JSON-совместимые форматы
+        monthly_activity_json = json.dumps([
+            {
+                'month': item['month'].strftime('%Y-%m') if item.get('month') else '',
+                'games': item.get('games', 0)
+            }
+            for item in stats.get('monthly_activity', [])
+        ])
+
+        weekday_stats_json = json.dumps(stats.get('weekday_stats', []))
+        rating_progress_json = json.dumps(stats.get('rating_progress', []))
+
         context = {
             'stats': stats,
             'user': request.user,
+            'monthly_activity_json': monthly_activity_json,
+            'weekday_stats_json': weekday_stats_json,
+            'rating_progress_json': rating_progress_json,
         }
-        
+
         return render(request, 'booking/player_stats.html', context)
-    
+
     except Exception as e:
-        logger.error(f"Error rendering player statistics: {str(e)}")
+        import traceback
+        logger.error(f"Error rendering player statistics: {str(e)}\n{traceback.format_exc()}")
         messages.error(request, 'Ошибка загрузки статистики')
         return redirect('profile')
 

@@ -371,6 +371,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedCourtPrice = this.dataset.courtPrice;
                 selectedCourtName = this.querySelector('h4').textContent;
 
+                // Обновляем глобальные данные о выбранном корте
+                window.selectedCourtData = {
+                    id: selectedCourt,
+                    name: selectedCourtName,
+                    price: selectedCourtPrice
+                };
+
                 console.log('✅ Корт выбран - ID:', selectedCourt, 'Цена:', selectedCourtPrice, 'Название:', selectedCourtName);
 
                 // Загружаем доступные временные слоты
@@ -1575,6 +1582,19 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.head.appendChild(style);
     }
+
+    // Экспортируем необходимые функции и переменные в глобальную область
+    window.bookingState = {
+        get selectedDate() { return selectedDate; },
+        set selectedDate(val) { selectedDate = val; },
+        get selectedCourt() { return selectedCourt; },
+        set selectedCourt(val) { selectedCourt = val; }
+    };
+
+    window.loadTimeSlots = loadTimeSlots;
+    window.showTimeSlotsMessage = showTimeSlotsMessage;
+    window.formatDate = formatDate;
+    window.selectedCourtData = { id: null, name: null, price: null };
 
     console.log('✅ Booking JS загружен - ПОЛНАЯ ВЕРСИЯ');
 });

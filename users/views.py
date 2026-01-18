@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.db.models import Prefetch, Count, Q
 from datetime import datetime, timedelta
 from booking.models import Booking, Court
+from users.analytics import get_player_stats
 import json
 import logging
 
@@ -628,6 +629,28 @@ def profile(request):
     range_min = rating.get_range_min()
     range_max = rating.get_range_max()
 
+    # Получаем статистику игрока для вкладки "Моя статистика"
+    try:
+        stats = get_player_stats(request.user)
+
+        # Сериализуем данные для JavaScript
+        monthly_activity_json = json.dumps([
+            {
+                'month': item['month'].strftime('%Y-%m') if item.get('month') else '',
+                'games': item.get('games', 0)
+            }
+            for item in stats.get('monthly_activity', [])
+        ])
+
+        weekday_stats_json = json.dumps(stats.get('weekday_stats', []))
+        rating_progress_json = json.dumps(stats.get('rating_progress', []))
+    except Exception as e:
+        logger.error(f"Error getting player stats: {str(e)}")
+        stats = None
+        monthly_activity_json = '[]'
+        weekday_stats_json = '[]'
+        rating_progress_json = '[]'
+
     context = {
         'user': user,
         'bookings_with_extra': bookings_with_extra,  # Передаем обновленный список
@@ -638,6 +661,10 @@ def profile(request):
         'progress_percentage': progress_percentage,
         'range_min': range_min,
         'range_max': range_max,
+        'stats': stats,
+        'monthly_activity_json': monthly_activity_json,
+        'weekday_stats_json': weekday_stats_json,
+        'rating_progress_json': rating_progress_json,
     }
 
     return render(request, 'users/profile.html', context)

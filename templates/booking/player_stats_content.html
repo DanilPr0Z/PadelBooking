@@ -1,9 +1,6 @@
-{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Моя статистика{% endblock %}
-
-{% block extra_css %}
+<!-- CSS стили для статистики -->
 <style>
     .stats-container {
         max-width: 1400px;
@@ -99,7 +96,7 @@
 
     .chart-title {
         font-size: 20px;
-        font-weight: 600;
+        font-weight: 700;
         margin-bottom: 20px;
         color: #1a1a1a;
     }
@@ -124,7 +121,7 @@
         padding: 20px;
         border-radius: 12px;
         text-align: center;
-        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        background: #f3f4f6;
         transition: all 0.3s;
     }
 
@@ -192,6 +189,7 @@
         padding: 30px;
         border-radius: 16px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        margin-bottom: 40px;
     }
 
     .partner-item {
@@ -356,11 +354,6 @@
         border: 1px solid var(--card-border);
     }
 
-    /* Улучшенная поддержка темной темы для iframe */
-    :root[data-theme="dark"] body {
-        background: var(--body-bg);
-    }
-
     @media (max-width: 768px) {
         .charts-section {
             grid-template-columns: 1fr;
@@ -375,9 +368,8 @@
         }
     }
 </style>
-{% endblock %}
 
-{% block content %}
+<!-- HTML контент статистики -->
 <div class="stats-container">
     <!-- Header -->
     <div class="stats-header">
@@ -385,6 +377,7 @@
         <p class="stats-subtitle">Полный анализ вашей игровой активности</p>
     </div>
 
+    {% if stats %}
     <!-- Основные показатели -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -493,14 +486,20 @@
         {% endfor %}
     </div>
     {% endif %}
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<!-- Chart.js -->
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px;">
+        <h3 style="color: var(--gray-color); font-size: 1.3rem;">Нет данных для отображения статистики</h3>
+        <p style="color: var(--gray-color); margin-top: 10px;">Начните играть, чтобы увидеть свою статистику!</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Chart.js для графиков -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+{% if stats %}
 // Определяем цвета в зависимости от темы
 function getChartColors() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -597,13 +596,13 @@ new Chart(document.getElementById('weekdayChart'), {
             label: 'Игр',
             data: weekdayValues,
             backgroundColor: [
-                'rgba(158, 240, 26, 0.9)',    // Воскресенье - яркий зеленый
-                'rgba(191, 241, 103, 0.9)',   // Понедельник - светлый зеленый
-                'rgba(158, 240, 26, 0.7)',    // Вторник - средний зеленый
-                'rgba(191, 241, 103, 0.7)',   // Среда - светлый зеленый
-                'rgba(158, 240, 26, 0.85)',   // Четверг - яркий зеленый
-                'rgba(191, 241, 103, 0.85)',  // Пятница - светлый зеленый
-                'rgba(158, 240, 26, 0.95)'    // Суббота - самый яркий
+                'rgba(158, 240, 26, 0.9)',
+                'rgba(191, 241, 103, 0.9)',
+                'rgba(158, 240, 26, 0.7)',
+                'rgba(191, 241, 103, 0.7)',
+                'rgba(158, 240, 26, 0.85)',
+                'rgba(191, 241, 103, 0.85)',
+                'rgba(158, 240, 26, 0.95)'
             ],
             borderColor: '#9ef01a',
             borderWidth: 2
@@ -704,8 +703,8 @@ new Chart(document.getElementById('ratingChart'), {
 // Обновляем графики при смене темы
 window.addEventListener('storage', function(e) {
     if (e.key === 'theme') {
-        location.reload(); // Перезагружаем страницу для обновления графиков
+        location.reload();
     }
 });
+{% endif %}
 </script>
-{% endblock %}

@@ -19,6 +19,64 @@
             </button>
 
             {% if user.is_authenticated %}
+                <!-- Уведомления -->
+                <div class="notifications-container">
+                    <div class="notifications-btn" id="notificationsBtn" title="Уведомления">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">3</span>
+                    </div>
+
+                    <!-- Dropdown с уведомлениями -->
+                    <div class="notifications-dropdown" id="notificationsDropdown">
+                        <div class="notifications-header">
+                            <h3>Уведомления</h3>
+                            <button class="mark-all-read" id="markAllRead">
+                                <i class="fas fa-check-double"></i> Прочитать все
+                            </button>
+                        </div>
+
+                        <div class="notifications-list" id="notificationsList">
+                            <!-- Примеры уведомлений (потом заменим на реальные) -->
+                            <div class="notification-item unread">
+                                <div class="notification-icon booking">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <p class="notification-title">Бронирование подтверждено</p>
+                                    <p class="notification-text">Ваше бронирование на завтра 15:00 подтверждено</p>
+                                    <span class="notification-time">5 минут назад</span>
+                                </div>
+                            </div>
+
+                            <div class="notification-item unread">
+                                <div class="notification-icon partner">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <p class="notification-title">Новый партнер</p>
+                                    <p class="notification-text">Иван Петров присоединился к вашей игре</p>
+                                    <span class="notification-time">1 час назад</span>
+                                </div>
+                            </div>
+
+                            <div class="notification-item">
+                                <div class="notification-icon reminder">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <p class="notification-title">Напоминание</p>
+                                    <p class="notification-text">Игра начнется через 30 минут</p>
+                                    <span class="notification-time">2 часа назад</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="notifications-footer">
+                            <a href="#" class="view-all-notifications">Все уведомления</a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="user-dropdown">
                     <button class="user-btn">
                         <i class="fas fa-user"></i>
@@ -208,6 +266,67 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== ОТКРЫТИЕ МОДАЛЬНЫХ ОКОН ВХОДА/РЕГИСТРАЦИИ ==========
     // Обработчики определены в main.js, здесь ничего делать не нужно
+
+    // ========== УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ ==========
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const notificationsDropdown = document.getElementById('notificationsDropdown');
+    const markAllReadBtn = document.getElementById('markAllRead');
+
+    if (notificationsBtn && notificationsDropdown) {
+        // Открытие/закрытие уведомлений по клику на кнопку
+        notificationsBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = notificationsDropdown.classList.contains('show');
+
+            // Закрываем выпадающее меню пользователя если открыто
+            if (dropdownContent && dropdownContent.classList.contains('show')) {
+                closeDropdown();
+            }
+
+            if (isOpen) {
+                notificationsDropdown.classList.remove('show');
+            } else {
+                notificationsDropdown.classList.add('show');
+            }
+        });
+
+        // Закрытие при клике вне уведомлений
+        document.addEventListener('click', function(e) {
+            const notificationsContainer = document.querySelector('.notifications-container');
+            if (notificationsContainer && !notificationsContainer.contains(e.target)) {
+                notificationsDropdown.classList.remove('show');
+            }
+        });
+
+        // Отметить все как прочитанное
+        if (markAllReadBtn) {
+            markAllReadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const unreadItems = notificationsDropdown.querySelectorAll('.notification-item.unread');
+                unreadItems.forEach(item => {
+                    item.classList.remove('unread');
+                });
+
+                // Обновляем счетчик
+                const badge = document.getElementById('notificationBadge');
+                if (badge) {
+                    badge.textContent = '0';
+                    badge.style.display = 'none';
+                }
+
+                // TODO: отправить запрос на сервер для пометки уведомлений как прочитанных
+            });
+        }
+
+        // Клик по отдельному уведомлению
+        const notificationItems = notificationsDropdown.querySelectorAll('.notification-item');
+        notificationItems.forEach(item => {
+            item.addEventListener('click', function() {
+                this.classList.remove('unread');
+                // TODO: обработать клик по уведомлению (перейти к соответствующей брони и т.д.)
+            });
+        });
+    }
 });
 </script>
 

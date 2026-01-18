@@ -2385,6 +2385,293 @@ footer {
     color: var(--secondary-color);
 }
 
+/* ========== КНОПКА УВЕДОМЛЕНИЙ ========== */
+.notifications-btn {
+    position: relative;
+    background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%);
+    border: 2px solid rgba(158, 240, 26, 0.3);
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 12px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--secondary-color);
+    margin-right: 15px;
+}
+
+.notifications-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(158, 240, 26, 0.4);
+    color: white;
+}
+
+.notifications-btn i {
+    font-size: 20px;
+    transition: transform 0.3s;
+}
+
+.notifications-btn:hover i {
+    animation: bellRing 0.5s ease;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+    20%, 40%, 60%, 80% { transform: rotate(10deg); }
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+}
+
+:root[data-theme="dark"] .notifications-btn {
+    background: linear-gradient(135deg, rgba(158, 240, 26, 0.15) 0%, rgba(191, 241, 103, 0.15) 100%);
+    border-color: rgba(158, 240, 26, 0.4);
+    color: var(--primary-color);
+}
+
+:root[data-theme="dark"] .notifications-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: var(--secondary-color);
+}
+
+:root[data-theme="dark"] .notification-badge {
+    border-color: var(--card-bg);
+}
+
+/* ========== ВЫПАДАЮЩЕЕ МЕНЮ УВЕДОМЛЕНИЙ ========== */
+.notifications-container {
+    position: relative;
+}
+
+.notifications-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    width: 380px;
+    max-height: 500px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+}
+
+.notifications-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.notifications-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(158, 240, 26, 0.05) 0%, rgba(191, 241, 103, 0.05) 100%);
+}
+
+.notifications-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+.mark-all-read {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.mark-all-read:hover {
+    background: rgba(158, 240, 26, 0.1);
+}
+
+.mark-all-read i {
+    margin-right: 5px;
+}
+
+.notifications-list {
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--card-border);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    gap: 12px;
+    position: relative;
+}
+
+.notification-item:hover {
+    background: rgba(158, 240, 26, 0.05);
+}
+
+.notification-item.unread {
+    background: rgba(158, 240, 26, 0.08);
+}
+
+.notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+}
+
+.notification-icon.booking {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%);
+    color: #10b981;
+}
+
+.notification-icon.partner {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.2) 100%);
+    color: #3b82f6;
+}
+
+.notification-icon.reminder {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.2) 100%);
+    color: #f59e0b;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+}
+
+.notification-text {
+    color: var(--gray-color);
+    margin: 0 0 6px 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.notification-time {
+    color: var(--gray-color);
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.notifications-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--card-border);
+    text-align: center;
+    background: var(--card-bg);
+}
+
+.view-all-notifications {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+}
+
+.view-all-notifications:hover {
+    color: var(--primary-light);
+    text-decoration: underline;
+}
+
+/* Темная тема для уведомлений */
+:root[data-theme="dark"] .notifications-dropdown {
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="dark"] .notification-item:hover {
+    background: rgba(158, 240, 26, 0.08);
+}
+
+:root[data-theme="dark"] .notification-item.unread {
+    background: rgba(158, 240, 26, 0.12);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .notifications-dropdown {
+        width: 340px;
+        right: -10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .notifications-dropdown {
+        width: calc(100vw - 20px);
+        right: -80px;
+    }
+
+    .notifications-header {
+        padding: 15px;
+    }
+
+    .notifications-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .mark-all-read {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+}
+
 /* Плавные переходы для всех элементов при смене темы */
 .navbar,
 .dropdown-content,
@@ -2479,4 +2766,36 @@ footer {
     background: var(--card-bg);
     border-color: var(--card-border);
     color: var(--secondary-color);
+}
+
+:root[data-theme="dark"] .page-header h1 {
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .page-header p {
+    color: var(--gray-color);
+}
+
+:root[data-theme="dark"] .court-item h4 {
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] .court-item p {
+    color: var(--gray-color);
+}
+
+:root[data-theme="dark"] .price {
+    color: var(--primary-color);
+}
+
+:root[data-theme="dark"] .section-header {
+    color: var(--text-color);
+}
+
+:root[data-theme="dark"] button {
+    transition: all 0.3s ease;
+}
+
+:root[data-theme="dark"] label {
+    color: var(--text-color);
 }

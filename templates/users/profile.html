@@ -397,15 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- Вкладка "Моя статистика" -->
         <div id="statistics-tab" class="tab-content">
-            <div class="statistics-header">
-                <h2>Моя статистика</h2>
-                <p style="color: #666; margin-top: 10px;">Полный анализ вашей игровой активности</p>
-            </div>
-            <div class="statistics-iframe-container">
-                <iframe id="statistics-iframe" src="{% url 'player_statistics' %}"
-                        style="width: 100%; min-height: 800px; border: none; border-radius: 12px; background: white;">
-                </iframe>
-            </div>
+            {% include 'booking/player_stats_content.html' %}
         </div>
 
         <!-- Вкладка "Мой рейтинг" -->

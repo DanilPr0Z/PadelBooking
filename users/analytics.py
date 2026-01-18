@@ -127,6 +127,8 @@ def get_player_stats(user):
 
     # Прогресс рейтинга (если есть история)
     rating_progress = []
+    current_rating = None
+
     try:
         player_rating = user.rating
         rating_history = player_rating.rating_history or []
@@ -139,8 +141,9 @@ def get_player_stats(user):
             'level': player_rating.level,
             'progress_percentage': player_rating.get_progress_percentage()
         }
-    except PlayerRating.DoesNotExist:
+    except (PlayerRating.DoesNotExist, AttributeError):
         current_rating = None
+        rating_progress = []
 
     # Частота игр (среднее за последние 4 недели)
     four_weeks_ago = today - timedelta(weeks=4)
