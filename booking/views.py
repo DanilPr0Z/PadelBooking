@@ -1207,6 +1207,7 @@ def api_get_notifications(request):
 
 
 @login_required
+@login_required
 @require_POST
 def api_accept_invitation(request, invitation_id):
     """
@@ -1215,9 +1216,14 @@ def api_accept_invitation(request, invitation_id):
     try:
         from booking.models import BookingInvitation
 
+        logger.info(f"User {request.user.username} trying to accept invitation {invitation_id}")
+
         invitation = get_object_or_404(BookingInvitation, id=invitation_id, invitee=request.user)
 
+        logger.info(f"Invitation found: booking={invitation.booking.id}, status={invitation.status}")
+
         if invitation.status != 'pending':
+            logger.warning(f"Invitation {invitation_id} status is {invitation.status}, not pending")
             return JsonResponse({
                 'success': False,
                 'message': 'Приглашение уже обработано'
@@ -1226,6 +1232,8 @@ def api_accept_invitation(request, invitation_id):
         # Принимаем приглашение
         success, message = invitation.accept()
 
+        logger.info(f"Invitation.accept() result: success={success}, message={message}")
+
         if success:
             logger.info(f"User {request.user.username} accepted invitation {invitation_id}")
             return JsonResponse({
@@ -1233,6 +1241,7 @@ def api_accept_invitation(request, invitation_id):
                 'message': 'Вы успешно присоединились к игре!'
             })
         else:
+            logger.warning(f"Failed to accept invitation {invitation_id}: {message}")
             return JsonResponse({
                 'success': False,
                 'message': message

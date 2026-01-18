@@ -151,8 +151,13 @@ class Booking(models.Model):
         participants.extend(list(self.partners.all()))
         return participants
 
-    def can_join(self, user):
-        """Проверка, может ли пользователь присоединиться к бронированию"""
+    def can_join(self, user, skip_rating_check=False):
+        """Проверка, может ли пользователь присоединиться к бронированию
+
+        Args:
+            user: Пользователь, который хочет присоединиться
+            skip_rating_check: Пропустить проверку рейтинга (для приглашенных)
+        """
         # Нельзя присоединиться если:
         # 1. Бронирование не ищет партнёров
         if not self.looking_for_partner:
@@ -170,16 +175,17 @@ class Booking(models.Model):
         if self.status == 'cancelled':
             return False, "Бронирование отменено"
 
-        # 5. Проверка рейтинга (если указаны требуемые уровни)
-        required_levels = self.required_rating_levels or []
-        if required_levels:
-            try:
-                user_rating = user.rating.level
-                if user_rating not in required_levels:
-                    levels_str = ", ".join(required_levels)
-                    return False, f"Требуемые уровни: {levels_str}. Ваш уровень: {user_rating}"
-            except (AttributeError, Exception):
-                return False, "У вас нет рейтинга или он не установлен"
+        # 5. Проверка рейтинга (если указаны требуемые уровни и не пропускается проверка)
+        if not skip_rating_check:
+            required_levels = self.required_rating_levels or []
+            if required_levels:
+                try:
+                    user_rating = user.rating.level
+                    if user_rating not in required_levels:
+                        levels_str = ", ".join(required_levels)
+                        return False, f"Требуемые уровни: {levels_str}. Ваш уровень: {user_rating}"
+                except (AttributeError, Exception):
+                    return False, "У вас нет рейтинга или он не установлен"
 
         return True, "OK"
 
@@ -501,20 +507,19 @@ class BookingInvitation(models.Model):
         if not self.invitee:
             return False, "Пользователь не найден"
 
-        # Проверяем, можно ли присоединиться
-        can_join, message = self.booking.can_join(self.invitee)
+        # Проверяем, можно ли присоединиться (пропускаем проверку рейтинга для приглашенных)
+        can_join, message = self.booking.can_join(self.invitee, skip_rating_check=True)
         if not can_join:
             return False, message
 
-        # Добавляем пользователя в партнёры
-        success, msg = self.booking.add_partner(self.invitee)
-        if success:
-            self.status = 'accepted'
-            self.responded_at = timezone.now()
-            self.save()
-            return True, "Приглашение принято"
-        else:
-            return False, msg
+        # Добавляем пользователя в партнёры вручную (т.к. add_partner снова вызовет can_join)
+        if self.invitee not in self.booking.partners.all():
+            self.booking.partners.add(self.invitee)
+
+        self.status = 'accepted'
+        self.responded_at = timezone.now()
+        self.save()
+        return True, "Приглашение принято"
 
     def decline(self):
         """Отклонить приглашение"""
