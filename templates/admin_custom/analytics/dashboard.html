@@ -1,0 +1,312 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Аналитика | Paddle Booking Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin_custom/css/analytics.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="analytics-dashboard">
+    <!-- Заголовок и фильтры -->
+    <div class="dashboard-header">
+        <h1>📊 Аналитика и статистика</h1>
+
+        <div class="period-selector">
+            <select id="periodSelect" onchange="changePeriod(this.value)">
+                <option value="7days" {% if period == '7days' %}selected{% endif %}>Последние 7 дней</option>
+                <option value="30days" {% if period == '30days' %}selected{% endif %}>Последние 30 дней</option>
+                <option value="90days" {% if period == '90days' %}selected{% endif %}>Последние 90 дней</option>
+                <option value="year" {% if period == 'year' %}selected{% endif %}>Год</option>
+            </select>
+
+            <a href="{% url 'admin_export_excel' %}?period={{ period }}" class="btn-export">
+                📥 Экспорт в Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Метрики -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">💰</div>
+            <div class="metric-value">{{ financial.total_revenue|floatformat:0 }} ₽</div>
+            <div class="metric-label">Общий доход</div>
+            <div class="metric-change {% if financial.paid_amount >= financial.total_revenue %}positive{% endif %}">
+                Оплачено: {{ financial.paid_amount|floatformat:0 }} ₽
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon">📈</div>
+            <div class="metric-value">{{ occupancy.overall_occupancy_rate }}%</div>
+            <div class="metric-label">Загруженность</div>
+            <div class="metric-change">
+                {{ occupancy.total_bookings }} бронирований
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon">👥</div>
+            <div class="metric-value">{{ clients.active_users }}</div>
+            <div class="metric-label">Активных клиентов</div>
+            <div class="metric-change positive">
+                +{{ clients.new_users }} новых
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon">💎</div>
+            <div class="metric-value">{{ clients.avg_ltv|floatformat:0 }} ₽</div>
+            <div class="metric-label">Средний LTV</div>
+            <div class="metric-change">
+                Retention: {{ clients.retention_rate }}%
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики -->
+    <div class="charts-grid">
+        <!-- График дохода -->
+        <div class="chart-card">
+            <h3>Динамика дохода</h3>
+            <canvas id="revenueChart"></canvas>
+        </div>
+
+        <!-- График загруженности -->
+        <div class="chart-card">
+            <h3>Загруженность кортов</h3>
+            <canvas id="occupancyChart"></canvas>
+        </div>
+
+        <!-- График по дням недели -->
+        <div class="chart-card">
+            <h3>Активность по дням недели</h3>
+            <canvas id="weekdayChart"></canvas>
+        </div>
+
+        <!-- График по часам -->
+        <div class="chart-card">
+            <h3>Пиковые часы</h3>
+            <canvas id="hourlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Таблицы -->
+    <div class="tables-grid">
+        <!-- Топ клиенты -->
+        <div class="table-card">
+            <h3>Топ клиенты</h3>
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Бронирований</th>
+                        <th>Потрачено</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients.top_clients|slice:":10" %}
+                    <tr>
+                        <td>{{ client.name }}</td>
+                        <td>{{ client.bookings_count }}</td>
+                        <td>{{ client.total_spent|floatformat:0 }} ₽</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #999;">Нет данных</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Доход по кортам -->
+        <div class="table-card">
+            <h3>Доход по кортам</h3>
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Корт</th>
+                        <th>Бронирований</th>
+                        <th>Доход</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for court in financial.revenue_by_court|slice:":10" %}
+                    <tr>
+                        <td>{{ court.court__name }}</td>
+                        <td>{{ court.bookings_count }}</td>
+                        <td>{{ court.revenue|floatformat:0 }} ₽</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #999;">Нет данных</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Данные из Django
+const financialData = {{ financial_json|safe }};
+const occupancyData = {{ occupancy_json|safe }};
+const clientsData = {{ clients_json|safe }};
+
+// Функция смены периода
+function changePeriod(period) {
+    window.location.href = '?period=' + period;
+}
+
+// Цвета для графиков
+const colors = {
+    primary: '#9ef01a',
+    secondary: '#1e3a5f',
+    success: '#10b981',
+    warning: '#fbbf24',
+    error: '#ef4444',
+    info: '#3b82f6'
+};
+
+// График дохода по месяцам
+if (financialData.monthly_revenue && financialData.monthly_revenue.length > 0) {
+    const ctx1 = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: financialData.monthly_revenue.map(d => {
+                const date = new Date(d.month);
+                return date.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' });
+            }),
+            datasets: [{
+                label: 'Доход',
+                data: financialData.monthly_revenue.map(d => d.revenue),
+                borderColor: colors.primary,
+                backgroundColor: colors.primary + '20',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: value => value.toLocaleString() + ' ₽'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// График загруженности кортов
+if (occupancyData.court_occupancy && occupancyData.court_occupancy.length > 0) {
+    const ctx2 = document.getElementById('occupancyChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: occupancyData.court_occupancy.map(d => d.court__name),
+            datasets: [{
+                label: 'Загруженность %',
+                data: occupancyData.court_occupancy.map(d => d.occupancy_rate),
+                backgroundColor: colors.primary,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// График по дням недели
+if (occupancyData.weekday_occupancy && occupancyData.weekday_occupancy.length > 0) {
+    const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const ctx3 = document.getElementById('weekdayChart').getContext('2d');
+    new Chart(ctx3, {
+        type: 'bar',
+        data: {
+            labels: occupancyData.weekday_occupancy.map(d => weekdays[d.weekday - 1]),
+            datasets: [{
+                label: 'Бронирований',
+                data: occupancyData.weekday_occupancy.map(d => d.bookings_count),
+                backgroundColor: [
+                    colors.info,
+                    colors.primary,
+                    colors.primary,
+                    colors.primary,
+                    colors.primary,
+                    colors.primary,
+                    colors.warning
+                ],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+// График по часам
+if (occupancyData.hourly_occupancy && occupancyData.hourly_occupancy.length > 0) {
+    const ctx4 = document.getElementById('hourlyChart').getContext('2d');
+    new Chart(ctx4, {
+        type: 'line',
+        data: {
+            labels: occupancyData.hourly_occupancy.map(d => d.hour + ':00'),
+            datasets: [{
+                label: 'Бронирований',
+                data: occupancyData.hourly_occupancy.map(d => d.bookings_count),
+                borderColor: colors.info,
+                backgroundColor: colors.info + '20',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
