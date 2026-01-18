@@ -82,8 +82,14 @@ class Booking(models.Model):
         max_length=10,
         blank=True,
         null=True,
-        verbose_name='Требуемый уровень игры',
-        help_text='Буквенный рейтинг для поиска партнёров (например: C+, B-)'
+        verbose_name='Требуемый уровень игры (устаревшее)',
+        help_text='DEPRECATED: используйте required_rating_levels'
+    )
+    required_rating_levels = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Требуемые уровни игры',
+        help_text='Список буквенных рейтингов для поиска партнёров (например: ["C+", "B-", "B"])'
     )
 
     class Meta:
@@ -164,14 +170,16 @@ class Booking(models.Model):
         if self.status == 'cancelled':
             return False, "Бронирование отменено"
 
-        # 5. Проверка рейтинга (если указан требуемый уровень)
-        if self.required_rating_level:
+        # 5. Проверка рейтинга (если указаны требуемые уровни)
+        required_levels = self.required_rating_levels or []
+        if required_levels:
             try:
                 user_rating = user.rating.level
-                if user_rating != self.required_rating_level:
-                    return False, f"Требуемый уровень: {self.required_rating_level}, ваш: {user_rating}"
-            except (AttributeError, self.__class__.DoesNotExist):
-                return False, "У вас нет рейтинга"
+                if user_rating not in required_levels:
+                    levels_str = ", ".join(required_levels)
+                    return False, f"Требуемые уровни: {levels_str}. Ваш уровень: {user_rating}"
+            except (AttributeError, Exception):
+                return False, "У вас нет рейтинга или он не установлен"
 
         return True, "OK"
 

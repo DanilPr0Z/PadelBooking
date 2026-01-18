@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
@@ -300,7 +301,15 @@ def create_booking(request):
             # Получаем данные для поиска партнеров
             looking_for_partner = request.POST.get('looking_for_partner') == 'on'
             max_players = int(request.POST.get('max_players', 4))
-            required_rating_level = request.POST.get('required_rating_level', '')
+
+            # Получаем выбранные уровни рейтинга (множественные чекбоксы)
+            required_rating_levels = request.POST.getlist('required_rating_levels')
+            logger.info(f"Selected rating levels: {required_rating_levels}")
+
+            # Получаем приглашенных участников
+            invited_participants_str = request.POST.get('invited_participants', '')
+            invited_participant_ids = [int(pid) for pid in invited_participants_str.split(',') if pid.strip()]
+            logger.info(f"Invited participants: {invited_participant_ids}")
 
             # Получаем тип бронирования и тренера
             booking_type = request.POST.get('booking_type', 'game')
@@ -326,7 +335,7 @@ def create_booking(request):
                 coach=coach,
                 looking_for_partner=looking_for_partner if booking_type == 'game' else False,
                 max_players=max_players if booking_type == 'game' else 1,
-                required_rating_level=required_rating_level if (required_rating_level and booking_type == 'game') else None
+                required_rating_levels=required_rating_levels if (required_rating_levels and booking_type == 'game') else []
             )
 
             # Повторная проверка (защита от race condition)
@@ -339,6 +348,33 @@ def create_booking(request):
                 error_msg = "Это время было забронировано другим пользователем. Пожалуйста, выберите другое время."
                 messages.error(request, create_error_message("Время занято", error_msg))
                 return redirect('booking')
+
+            # Отправляем приглашения выбранным участникам
+            if invited_participant_ids:
+                from django.contrib.auth.models import User
+                from booking.models import BookingInvitation
+
+                invitations_sent = 0
+                for user_id in invited_participant_ids:
+                    try:
+                        invited_user = User.objects.get(id=user_id)
+                        # Создаем приглашение
+                        BookingInvitation.objects.create(
+                            booking=booking,
+                            inviter=request.user,
+                            invitee=invited_user,
+                            invitee_phone=invited_user.profile.phone if hasattr(invited_user, 'profile') else '',
+                            message=f"Приглашение присоединиться к игре {booking_date.strftime('%d.%m.%Y')} в {start_time_str}"
+                        )
+                        invitations_sent += 1
+                        logger.info(f"Invitation sent to user {invited_user.username} for booking {booking.id}")
+                    except User.DoesNotExist:
+                        logger.warning(f"User with id {user_id} not found for invitation")
+                    except Exception as e:
+                        logger.error(f"Error sending invitation to user {user_id}: {str(e)}")
+
+                if invitations_sent > 0:
+                    logger.info(f"Sent {invitations_sent} invitations for booking {booking.id}")
 
         # 7. Очищаем кэш
         clear_slots_cache(court_id=court_id, date_str=date_str)
@@ -1040,4 +1076,211 @@ def get_coaches_list(request):
         return JsonResponse({
             'success': False,
             'error': 'Ошибка загрузки списка тренеров'
+        }, status=500)
+
+
+@login_required
+def api_search_users(request):
+    """
+    API: Умный поиск пользователей по имени, фамилии или телефону
+    """
+    try:
+        query = request.GET.get('q', '').strip()
+
+        logger.info(f"Search query from user {request.user.username}: '{query}'")
+
+        if len(query) < 2:
+            return JsonResponse({
+                'success': False,
+                'message': 'Запрос должен содержать минимум 2 символа',
+                'users': []
+            })
+
+        # Ищем пользователей по имени, фамилии или телефону
+        from django.db.models import Q
+        from users.models import UserProfile
+
+        # Два отдельных запроса для надежности
+        # 1. Поиск по имени и фамилии
+        users_by_name = User.objects.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        )
+
+        # 2. Поиск по телефону (только если есть профиль)
+        users_by_phone = User.objects.filter(
+            profile__phone__icontains=query
+        )
+
+        # Объединяем результаты и убираем дубликаты
+        users = (users_by_name | users_by_phone).distinct().select_related('profile')[:10]
+
+        logger.info(f"Found {users.count()} users matching query '{query}'")
+
+        users_data = []
+        for user in users:
+            full_name = f"{user.first_name} {user.last_name}".strip()
+            display_name = full_name if full_name else user.username
+
+            # Безопасно получаем телефон
+            try:
+                phone = user.profile.phone
+            except (AttributeError, UserProfile.DoesNotExist):
+                phone = 'Не указан'
+
+            # Помечаем если это текущий пользователь
+            is_current_user = user.id == request.user.id
+
+            users_data.append({
+                'id': user.id,
+                'full_name': display_name,
+                'phone': phone,
+                'is_current_user': is_current_user,
+            })
+
+            logger.debug(f"User found: {display_name} ({phone}) {'[current user]' if is_current_user else ''}")
+
+        return JsonResponse({
+            'success': True,
+            'users': users_data,
+            'count': len(users_data)
+        })
+
+    except Exception as e:
+        logger.error(f"Error searching users: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка поиска пользователей',
+            'users': []
+        }, status=500)
+
+
+@login_required
+def api_get_notifications(request):
+    """
+    API: Получить уведомления пользователя (приглашения в игры)
+    """
+    try:
+        from booking.models import BookingInvitation
+
+        # Получаем все непрочитанные приглашения
+        invitations = BookingInvitation.objects.filter(
+            invitee=request.user,
+            status='pending'
+        ).select_related('booking', 'booking__court', 'inviter').order_by('-created_at')[:10]
+
+        notifications_data = []
+        for invitation in invitations:
+            booking = invitation.booking
+            inviter_name = f"{invitation.inviter.first_name} {invitation.inviter.last_name}".strip() or invitation.inviter.username
+
+            # Форматируем дату и время
+            booking_date = booking.date.strftime('%d.%m.%Y')
+            booking_time = booking.start_time.strftime('%H:%M')
+
+            notifications_data.append({
+                'id': invitation.id,
+                'type': 'invitation',
+                'title': f'Приглашение в игру',
+                'message': f'{inviter_name} приглашает вас на игру {booking_date} в {booking_time}',
+                'inviter_name': inviter_name,
+                'court_name': booking.court.name,
+                'date': booking_date,
+                'time': booking_time,
+                'booking_id': booking.id,
+                'created_at': invitation.created_at.isoformat(),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'notifications': notifications_data,
+            'count': len(notifications_data)
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка загрузки уведомлений',
+            'notifications': []
+        }, status=500)
+
+
+@login_required
+@require_POST
+def api_accept_invitation(request, invitation_id):
+    """
+    API: Принять приглашение в игру
+    """
+    try:
+        from booking.models import BookingInvitation
+
+        invitation = get_object_or_404(BookingInvitation, id=invitation_id, invitee=request.user)
+
+        if invitation.status != 'pending':
+            return JsonResponse({
+                'success': False,
+                'message': 'Приглашение уже обработано'
+            }, status=400)
+
+        # Принимаем приглашение
+        success, message = invitation.accept()
+
+        if success:
+            logger.info(f"User {request.user.username} accepted invitation {invitation_id}")
+            return JsonResponse({
+                'success': True,
+                'message': 'Вы успешно присоединились к игре!'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            }, status=400)
+
+    except Exception as e:
+        logger.error(f"Error accepting invitation: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка при принятии приглашения'
+        }, status=500)
+
+
+@login_required
+@require_POST
+def api_decline_invitation(request, invitation_id):
+    """
+    API: Отклонить приглашение в игру
+    """
+    try:
+        from booking.models import BookingInvitation
+
+        invitation = get_object_or_404(BookingInvitation, id=invitation_id, invitee=request.user)
+
+        if invitation.status != 'pending':
+            return JsonResponse({
+                'success': False,
+                'message': 'Приглашение уже обработано'
+            }, status=400)
+
+        # Отклоняем приглашение
+        success, message = invitation.decline()
+
+        if success:
+            logger.info(f"User {request.user.username} declined invitation {invitation_id}")
+            return JsonResponse({
+                'success': True,
+                'message': 'Приглашение отклонено'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            }, status=400)
+
+    except Exception as e:
+        logger.error(f"Error declining invitation: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': 'Ошибка при отклонении приглашения'
         }, status=500)

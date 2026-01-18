@@ -23,4 +23,8 @@ urlpatterns = [
     path('api/calendar-events/', views.api_calendar_events, name='api_calendar_events'),
     path('api/available-slots/', views.api_available_slots, name='api_available_slots'),
     path('api/coaches/', views.get_coaches_list, name='api_coaches_list'),
+    path('api/search-users/', views.api_search_users, name='api_search_users'),
+    path('api/notifications/', views.api_get_notifications, name='api_get_notifications'),
+    path('api/invitation/<int:invitation_id>/accept/', views.api_accept_invitation, name='api_accept_invitation'),
+    path('api/invitation/<int:invitation_id>/decline/', views.api_decline_invitation, name='api_decline_invitation'),
 ]

@@ -189,40 +189,66 @@ def get_calendar_events(user, start_date, end_date):
 
     Returns:
         List событий в формате FullCalendar
+
+    ПОКАЗЫВАЕМ ТОЛЬКО:
+    1. Свои бронирования (где пользователь создатель или партнёр)
+    2. Брони "Найди партнёра" с подходящим уровнем игры
     """
-    bookings = Booking.objects.filter(
+    # Получаем рейтинг пользователя
+    try:
+        user_rating = user.rating.level
+    except (AttributeError, PlayerRating.DoesNotExist):
+        user_rating = None
+
+    # Свои бронирования (создатель или партнёр)
+    my_bookings = Booking.objects.filter(
+        Q(user=user) | Q(partners=user),
         date__gte=start_date,
         date__lte=end_date
     ).select_related('court', 'user', 'user__profile').prefetch_related('partners')
 
+    # Брони "Найди партнёра" с подходящим уровнем (не свои)
+    partner_bookings = Booking.objects.filter(
+        looking_for_partner=True,
+        status__in=['pending', 'confirmed'],
+        date__gte=start_date,
+        date__lte=end_date
+    ).exclude(
+        Q(user=user) | Q(partners=user)
+    ).select_related('court', 'user', 'user__profile').prefetch_related('partners')
+
+    # Фильтруем брони "Найди партнёра" по уровню игры
+    filtered_partner_bookings = []
+    for booking in partner_bookings:
+        # Если не заполнено и требуемые уровни не указаны - показываем
+        if not booking.is_full:
+            required_levels = booking.required_rating_levels or []
+            if not required_levels:
+                # Нет требования к уровню - доступно всем
+                filtered_partner_bookings.append(booking)
+            elif user_rating and user_rating in required_levels:
+                # Уровень совпадает с одним из требуемых - показываем
+                filtered_partner_bookings.append(booking)
+            # Иначе не показываем
+
     events = []
 
-    for booking in bookings:
-        # Определяем цвет в зависимости от статуса и отношения к пользователю
-        is_my_booking = booking.user == user or user in booking.partners.all()
+    # Обрабатываем свои бронирования
+    for booking in my_bookings:
+        is_my_booking = True
 
-        if is_my_booking:
-            if booking.status == 'confirmed':
-                color = '#10b981'  # Зеленый - моё подтвержденное
-            elif booking.status == 'pending':
-                color = '#f59e0b'  # Оранжевый - моё ожидает
-            else:
-                color = '#6b7280'  # Серый - отменено
+        if booking.status == 'confirmed':
+            color = '#10b981'  # Зеленый - моё подтвержденное
+        elif booking.status == 'pending':
+            color = '#f59e0b'  # Оранжевый - моё ожидает
         else:
-            if booking.status in ['pending', 'confirmed']:
-                color = '#3b82f6'  # Синий - чужое
-            else:
-                continue  # Не показываем чужие отмененные
+            color = '#6b7280'  # Серый - отменено
 
-        # Формируем название
+        title = f"🎾 {booking.court.name}"
+        if booking.partners.exists():
+            title += f" ({booking.partners.count() + 1} игроков)"
+
         creator_name = f"{booking.user.first_name} {booking.user.last_name}".strip() or booking.user.username
-
-        if is_my_booking:
-            title = f"🎾 {booking.court.name}"
-            if booking.partners.exists():
-                title += f" ({booking.partners.count() + 1} игроков)"
-        else:
-            title = f"Занято: {booking.court.name}"
 
         # Создаем datetime объекты
         start_datetime = timezone.make_aware(
@@ -246,9 +272,55 @@ def get_calendar_events(user, start_date, end_date):
                 'status': booking.status,
                 'price': float(booking.total_price),
                 'isMine': is_my_booking,
-                'canJoin': booking.looking_for_partner and not booking.is_full and not is_my_booking,
+                'canJoin': False,  # Свои брони - не можем присоединиться
                 'partnersCount': booking.partners.count(),
                 'maxPlayers': booking.max_players,
+                'lookingForPartner': booking.looking_for_partner,
+            }
+        }
+
+        events.append(event)
+
+    # Обрабатываем брони "Найди партнёра"
+    for booking in filtered_partner_bookings:
+        is_my_booking = False
+        color = '#3b82f6'  # Синий - можно присоединиться
+
+        creator_name = f"{booking.user.first_name} {booking.user.last_name}".strip() or booking.user.username
+
+        title = f"🔍 {booking.court.name} - Ищут партнёра"
+        required_levels = booking.required_rating_levels or []
+        if required_levels:
+            levels_str = ", ".join(required_levels)
+            title += f" ({levels_str})"
+
+        # Создаем datetime объекты
+        start_datetime = timezone.make_aware(
+            datetime.combine(booking.date, booking.start_time)
+        )
+        end_datetime = timezone.make_aware(
+            datetime.combine(booking.date, booking.end_time)
+        )
+
+        event = {
+            'id': booking.id,
+            'title': title,
+            'start': start_datetime.isoformat(),
+            'end': end_datetime.isoformat(),
+            'color': color,
+            'extendedProps': {
+                'bookingId': booking.id,
+                'courtId': booking.court.id,
+                'courtName': booking.court.name,
+                'creatorName': creator_name,
+                'status': booking.status,
+                'price': float(booking.price_per_person),
+                'isMine': is_my_booking,
+                'canJoin': True,  # Доступно для присоединения
+                'partnersCount': booking.partners.count(),
+                'maxPlayers': booking.max_players,
+                'lookingForPartner': booking.looking_for_partner,
+                'requiredRatings': booking.required_rating_levels or [],
             }
         }
 

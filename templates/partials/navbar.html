@@ -29,58 +29,27 @@
                     <!-- Dropdown с уведомлениями -->
                     <div class="notifications-dropdown" id="notificationsDropdown">
                         <div class="notifications-header">
-                            <h3>Уведомления</h3>
-                            <button class="mark-all-read" id="markAllRead">
-                                <i class="fas fa-check-double"></i> Прочитать все
-                            </button>
+                            <h3>Приглашения в игры</h3>
                         </div>
 
                         <div class="notifications-list" id="notificationsList">
-                            <!-- Примеры уведомлений (потом заменим на реальные) -->
-                            <div class="notification-item unread">
-                                <div class="notification-icon booking">
-                                    <i class="fas fa-calendar-check"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <p class="notification-title">Бронирование подтверждено</p>
-                                    <p class="notification-text">Ваше бронирование на завтра 15:00 подтверждено</p>
-                                    <span class="notification-time">5 минут назад</span>
-                                </div>
+                            <!-- Загружается через JavaScript -->
+                            <div class="notification-loading" style="text-align: center; padding: 40px; color: #999;">
+                                <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+                                <p>Загрузка...</p>
                             </div>
-
-                            <div class="notification-item unread">
-                                <div class="notification-icon partner">
-                                    <i class="fas fa-user-plus"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <p class="notification-title">Новый партнер</p>
-                                    <p class="notification-text">Иван Петров присоединился к вашей игре</p>
-                                    <span class="notification-time">1 час назад</span>
-                                </div>
-                            </div>
-
-                            <div class="notification-item">
-                                <div class="notification-icon reminder">
-                                    <i class="fas fa-bell"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <p class="notification-title">Напоминание</p>
-                                    <p class="notification-text">Игра начнется через 30 минут</p>
-                                    <span class="notification-time">2 часа назад</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="notifications-footer">
-                            <a href="#" class="view-all-notifications">Все уведомления</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="user-dropdown">
                     <button class="user-btn">
-                        <i class="fas fa-user"></i>
-                        {{ user.username }}
+                        {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="user-avatar">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user.first_name }}+{{ user.last_name }}&background=9ef01a&color=1a1a1a&bold=true" alt="Avatar" class="user-avatar">
+                        {% endif %}
+                        <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
                     </button>
                     <div class="dropdown-content">
                         <a href="{% url 'profile' %}" id="profile-link"><i class="fas fa-user"></i> Профиль</a>
@@ -270,9 +239,179 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ ==========
     const notificationsBtn = document.getElementById('notificationsBtn');
     const notificationsDropdown = document.getElementById('notificationsDropdown');
-    const markAllReadBtn = document.getElementById('markAllRead');
+    const notificationsList = document.getElementById('notificationsList');
+    const notificationBadge = document.getElementById('notificationBadge');
+
+    // Функция загрузки уведомлений
+    function loadNotifications() {
+        if (!notificationsList) return;
+
+        fetch('/booking/api/notifications/')
+            .then(response => response.json())
+            .then(data => {
+                console.log('📬 Уведомления загружены:', data);
+
+                if (data.success && data.notifications && data.notifications.length > 0) {
+                    // Обновляем счетчик
+                    if (notificationBadge) {
+                        notificationBadge.textContent = data.count;
+                        notificationBadge.style.display = data.count > 0 ? 'flex' : 'none';
+                    }
+
+                    // Рендерим уведомления
+                    notificationsList.innerHTML = data.notifications.map(notification => `
+                        <div class="notification-item invitation-item" data-invitation-id="${notification.id}">
+                            <div class="notification-icon invitation-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="notification-content">
+                                <p class="notification-title">${notification.title}</p>
+                                <p class="notification-text">${notification.message}</p>
+                                <div class="notification-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+                                    <button class="btn-accept-invitation" data-invitation-id="${notification.id}"
+                                            style="flex: 1; padding: 8px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                                        <i class="fas fa-check"></i> Принять
+                                    </button>
+                                    <button class="btn-decline-invitation" data-invitation-id="${notification.id}"
+                                            style="flex: 1; padding: 8px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                                        <i class="fas fa-times"></i> Отклонить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // Добавляем обработчики для кнопок
+                    document.querySelectorAll('.btn-accept-invitation').forEach(btn => {
+                        btn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const invitationId = this.dataset.invitationId;
+                            acceptInvitation(invitationId);
+                        });
+                    });
+
+                    document.querySelectorAll('.btn-decline-invitation').forEach(btn => {
+                        btn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const invitationId = this.dataset.invitationId;
+                            declineInvitation(invitationId);
+                        });
+                    });
+                } else {
+                    // Нет уведомлений
+                    if (notificationBadge) {
+                        notificationBadge.style.display = 'none';
+                    }
+                    notificationsList.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #999;">
+                            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                            <p style="margin: 0; font-size: 15px;">Нет новых приглашений</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка загрузки уведомлений:', error);
+                notificationsList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                        <p>Ошибка загрузки уведомлений</p>
+                    </div>
+                `;
+            });
+    }
+
+    // Функция принятия приглашения
+    function acceptInvitation(invitationId) {
+        fetch(`/booking/api/invitation/${invitationId}/accept/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (window.toast) {
+                    window.toast.success(data.message);
+                } else {
+                    alert(data.message);
+                }
+                loadNotifications(); // Перезагружаем уведомления
+            } else {
+                if (window.toast) {
+                    window.toast.error(data.message);
+                } else {
+                    alert(data.message);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Ошибка принятия приглашения:', error);
+            if (window.toast) {
+                window.toast.error('Ошибка при принятии приглашения');
+            }
+        });
+    }
+
+    // Функция отклонения приглашения
+    function declineInvitation(invitationId) {
+        fetch(`/booking/api/invitation/${invitationId}/decline/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (window.toast) {
+                    window.toast.info(data.message);
+                } else {
+                    alert(data.message);
+                }
+                loadNotifications(); // Перезагружаем уведомления
+            } else {
+                if (window.toast) {
+                    window.toast.error(data.message);
+                } else {
+                    alert(data.message);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Ошибка отклонения приглашения:', error);
+            if (window.toast) {
+                window.toast.error('Ошибка при отклонении приглашения');
+            }
+        });
+    }
+
+    // Функция получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
     if (notificationsBtn && notificationsDropdown) {
+        // Загружаем уведомления при загрузке страницы
+        loadNotifications();
+
+        // Обновляем каждые 30 секунд
+        setInterval(loadNotifications, 30000);
+
         // Открытие/закрытие уведомлений по клику на кнопку
         notificationsBtn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -287,6 +426,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 notificationsDropdown.classList.remove('show');
             } else {
                 notificationsDropdown.classList.add('show');
+                // Перезагружаем при открытии
+                loadNotifications();
             }
         });
 
@@ -297,38 +438,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 notificationsDropdown.classList.remove('show');
             }
         });
-
-        // Отметить все как прочитанное
-        if (markAllReadBtn) {
-            markAllReadBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const unreadItems = notificationsDropdown.querySelectorAll('.notification-item.unread');
-                unreadItems.forEach(item => {
-                    item.classList.remove('unread');
-                });
-
-                // Обновляем счетчик
-                const badge = document.getElementById('notificationBadge');
-                if (badge) {
-                    badge.textContent = '0';
-                    badge.style.display = 'none';
-                }
-
-                // TODO: отправить запрос на сервер для пометки уведомлений как прочитанных
-            });
-        }
-
-        // Клик по отдельному уведомлению
-        const notificationItems = notificationsDropdown.querySelectorAll('.notification-item');
-        notificationItems.forEach(item => {
-            item.addEventListener('click', function() {
-                this.classList.remove('unread');
-                // TODO: обработать клик по уведомлению (перейти к соответствующей брони и т.д.)
-            });
-        });
     }
 });
 </script>
+
+<style>
+/* Стили для аватарки в navbar */
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+    border: 2px solid var(--primary-color);
+    background: white;
+}
+
+.user-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-name {
+    font-weight: 600;
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 768px) {
+    .user-name {
+        display: none;
+    }
+
+    .user-avatar {
+        margin-right: 0;
+    }
+}
+</style>
 
 <!-- ========== ПЕРЕКЛЮЧЕНИЕ ТЕМНОЙ ТЕМЫ (ГЛОБАЛЬНО) ========== -->
 <script>

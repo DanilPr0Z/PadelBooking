@@ -541,10 +541,138 @@
             transform: translateY(0);
         }
     }
+
+    /* Стили для выбора количества игроков */
+    .player-count-option {
+        transition: all 0.3s ease;
+    }
+
+    .player-count-option:hover {
+        border-color: var(--primary-color) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(158, 240, 26, 0.2);
+    }
+
+    .player-count-option.active {
+        border-color: var(--primary-color) !important;
+        background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%) !important;
+        box-shadow: 0 4px 12px rgba(158, 240, 26, 0.3);
+    }
+
+    /* Стили для выбора уровней рейтинга */
+    .rating-level-option {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .rating-badge {
+        padding: 12px 8px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--secondary-color);
+        background: white;
+        transition: all 0.3s ease;
+    }
+
+    .rating-level-option:hover .rating-badge {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(158, 240, 26, 0.2);
+    }
+
+    .rating-level-option.active .rating-badge {
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        color: var(--secondary-color);
+        box-shadow: 0 4px 12px rgba(158, 240, 26, 0.3);
+    }
+
+    /* Стили для поиска участников */
+    .search-result-item {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .search-result-item:hover {
+        background: rgba(158, 240, 26, 0.1);
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .participant-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        color: var(--secondary-color);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .participant-tag .remove-participant {
+        cursor: pointer;
+        margin-left: 4px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .participant-tag .remove-participant:hover {
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+
+<!-- Индикатор загрузки страницы -->
+<div id="page-loader" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+">
+    <div style="
+        width: 60px;
+        height: 60px;
+        border: 4px solid #f0f0f0;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    "></div>
+    <div style="
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--secondary-color);
+    ">Загрузка календаря...</div>
+</div>
+
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
 <div class="page-header">
     <h1>Бронирование кортов</h1>
     <p>Выберите дату, корт и время для бронирования</p>
@@ -747,6 +875,96 @@
                         </small>
                     </div>
                 </label>
+
+                <!-- Параметры поиска партнёра (показываются только если чекбокс отмечен) -->
+                <div id="partner-params" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #b3d9ff;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color); font-size: 14px;">
+                            <i class="fas fa-users"></i> Ищу партнёров (количество):
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <label class="player-count-option active" style="flex: 1; cursor: pointer; text-align: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: white; transition: all 0.3s;">
+                                <input type="radio" name="max_players" value="2" checked style="display: none;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--primary-color);">1</div>
+                                <div style="font-size: 11px; color: #666; margin-top: 4px;">партнёр</div>
+                            </label>
+                            <label class="player-count-option" style="flex: 1; cursor: pointer; text-align: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: white; transition: all 0.3s;">
+                                <input type="radio" name="max_players" value="3" style="display: none;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--primary-color);">2</div>
+                                <div style="font-size: 11px; color: #666; margin-top: 4px;">партнёра</div>
+                            </label>
+                            <label class="player-count-option" style="flex: 1; cursor: pointer; text-align: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: white; transition: all 0.3s;">
+                                <input type="radio" name="max_players" value="4" style="display: none;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--primary-color);">3</div>
+                                <div style="font-size: 11px; color: #666; margin-top: 4px;">партнёра</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: 600; color: var(--secondary-color); font-size: 14px;">
+                            <i class="fas fa-star"></i> Требуемые уровни игры (можно выбрать 1-3):
+                        </label>
+                        <div id="rating-levels-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;">
+                            <label class="rating-level-option" data-level="D">
+                                <input type="checkbox" name="required_rating_levels" value="D" style="display: none;">
+                                <div class="rating-badge">D</div>
+                            </label>
+                            <label class="rating-level-option" data-level="D+">
+                                <input type="checkbox" name="required_rating_levels" value="D+" style="display: none;">
+                                <div class="rating-badge">D+</div>
+                            </label>
+                            <label class="rating-level-option" data-level="C-">
+                                <input type="checkbox" name="required_rating_levels" value="C-" style="display: none;">
+                                <div class="rating-badge">C-</div>
+                            </label>
+                            <label class="rating-level-option" data-level="C">
+                                <input type="checkbox" name="required_rating_levels" value="C" style="display: none;">
+                                <div class="rating-badge">C</div>
+                            </label>
+                            <label class="rating-level-option" data-level="C+">
+                                <input type="checkbox" name="required_rating_levels" value="C+" style="display: none;">
+                                <div class="rating-badge">C+</div>
+                            </label>
+                            <label class="rating-level-option" data-level="B-">
+                                <input type="checkbox" name="required_rating_levels" value="B-" style="display: none;">
+                                <div class="rating-badge">B-</div>
+                            </label>
+                            <label class="rating-level-option" data-level="B">
+                                <input type="checkbox" name="required_rating_levels" value="B" style="display: none;">
+                                <div class="rating-badge">B</div>
+                            </label>
+                            <label class="rating-level-option" data-level="B+">
+                                <input type="checkbox" name="required_rating_levels" value="B+" style="display: none;">
+                                <div class="rating-badge">B+</div>
+                            </label>
+                            <label class="rating-level-option" data-level="A">
+                                <input type="checkbox" name="required_rating_levels" value="A" style="display: none;">
+                                <div class="rating-badge">A</div>
+                            </label>
+                            <label class="rating-level-option" data-level="PRO">
+                                <input type="checkbox" name="required_rating_levels" value="PRO" style="display: none;">
+                                <div class="rating-badge">PRO</div>
+                            </label>
+                        </div>
+                        <small style="display: block; margin-top: 8px; color: #666; font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> Выберите 1-3 уровня или оставьте пустым для любого уровня
+                        </small>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color); font-size: 14px;">
+                            <i class="fas fa-user-plus"></i> Пригласить участников (опционально):
+                        </label>
+                        <div style="position: relative;">
+                            <input type="text" id="participant-search" placeholder="Поиск по имени, фамилии или телефону..." style="width: 100%; padding: 12px 40px 12px 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;">
+                            <i class="fas fa-search" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+                        </div>
+                        <div id="search-results" style="display: none; margin-top: 8px; max-height: 200px; overflow-y: auto; border: 2px solid #ddd; border-radius: 8px; background: white;"></div>
+                        <div id="selected-participants" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                        <input type="hidden" id="invited-participants" name="invited_participants" value="">
+                    </div>
+                </div>
             </div>
 
             <!-- Выбор тренера (показывается только для тренировок) -->
@@ -1622,6 +1840,201 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Ошибка загрузки тренеров:', error);
             });
     }
+
+    // ========== УПРАВЛЕНИЕ ПАРАМЕТРАМИ ПОИСКА ПАРТНЁРА ==========
+    const lookingForPartnerCheckbox = document.getElementById('looking-for-partner');
+    const partnerParams = document.getElementById('partner-params');
+
+    if (lookingForPartnerCheckbox && partnerParams) {
+        lookingForPartnerCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                partnerParams.style.display = 'block';
+                partnerParams.style.animation = 'slideDown 0.3s ease-out';
+            } else {
+                partnerParams.style.display = 'none';
+            }
+        });
+    }
+
+    // ========== УПРАВЛЕНИЕ ВЫБОРОМ КОЛИЧЕСТВА ИГРОКОВ ==========
+    const playerCountOptions = document.querySelectorAll('.player-count-option');
+    playerCountOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            playerCountOptions.forEach(opt => opt.classList.remove('active'));
+            this.classList.add('active');
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        });
+    });
+
+    // ========== УПРАВЛЕНИЕ ВЫБОРОМ УРОВНЕЙ РЕЙТИНГА ==========
+    const ratingLevelOptions = document.querySelectorAll('.rating-level-option');
+    const MAX_RATING_SELECTIONS = 3;
+
+    ratingLevelOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            const currentlySelected = document.querySelectorAll('.rating-level-option.active').length;
+
+            if (this.classList.contains('active')) {
+                // Снять выбор
+                this.classList.remove('active');
+                checkbox.checked = false;
+            } else {
+                // Проверяем лимит
+                if (currentlySelected >= MAX_RATING_SELECTIONS) {
+                    if (window.toast) {
+                        window.toast.warning(`Можно выбрать максимум ${MAX_RATING_SELECTIONS} уровня`);
+                    } else {
+                        alert(`Можно выбрать максимум ${MAX_RATING_SELECTIONS} уровня`);
+                    }
+                    return;
+                }
+                // Добавить выбор
+                this.classList.add('active');
+                checkbox.checked = true;
+            }
+        });
+    });
+
+    // ========== УМНЫЙ ПОИСК УЧАСТНИКОВ ==========
+    const participantSearch = document.getElementById('participant-search');
+    const searchResults = document.getElementById('search-results');
+    const selectedParticipants = document.getElementById('selected-participants');
+    const invitedParticipantsInput = document.getElementById('invited-participants');
+    let selectedParticipantIds = [];
+
+    console.log('🔧 Инициализация поиска участников:', {
+        participantSearch: !!participantSearch,
+        searchResults: !!searchResults,
+        selectedParticipants: !!selectedParticipants,
+        invitedParticipantsInput: !!invitedParticipantsInput
+    });
+
+    if (participantSearch && searchResults) {
+        let searchTimeout;
+        participantSearch.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                console.log('🔍 Поиск участников:', query);
+                fetch(`/booking/api/search-users/?q=${encodeURIComponent(query)}`)
+                    .then(response => {
+                        console.log('📡 Ответ сервера:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('📊 Данные поиска:', data);
+                        if (data.users && data.users.length > 0) {
+                            searchResults.innerHTML = data.users.map(user => {
+                                const isCurrentUser = user.is_current_user;
+                                const disabledClass = isCurrentUser ? 'disabled' : '';
+                                const currentUserLabel = isCurrentUser ? '<span style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Это вы</span>' : '';
+
+                                return `
+                                    <div class="search-result-item ${disabledClass}"
+                                         data-user-id="${user.id}"
+                                         data-user-name="${user.full_name}"
+                                         data-user-phone="${user.phone}"
+                                         data-is-current="${isCurrentUser}"
+                                         style="${isCurrentUser ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
+                                        <i class="fas fa-user-circle" style="font-size: 24px; color: var(--primary-color);"></i>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 600; display: flex; align-items: center;">
+                                                ${user.full_name}
+                                                ${currentUserLabel}
+                                            </div>
+                                            <div style="font-size: 12px; color: #666;">${user.phone}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            searchResults.style.display = 'block';
+
+                            // Добавляем обработчики клика
+                            searchResults.querySelectorAll('.search-result-item').forEach(item => {
+                                item.addEventListener('click', function() {
+                                    // Проверяем, не пытается ли пользователь добавить себя
+                                    const isCurrent = this.dataset.isCurrent === 'true';
+                                    if (isCurrent) {
+                                        if (window.toast) {
+                                            window.toast.warning('Вы не можете пригласить самого себя');
+                                        } else {
+                                            alert('Вы не можете пригласить самого себя');
+                                        }
+                                        return;
+                                    }
+
+                                    const userId = this.dataset.userId;
+                                    const userName = this.dataset.userName;
+                                    const userPhone = this.dataset.userPhone;
+
+                                    if (!selectedParticipantIds.includes(userId)) {
+                                        addParticipant(userId, userName, userPhone);
+                                    } else {
+                                        if (window.toast) {
+                                            window.toast.info('Этот пользователь уже добавлен');
+                                        }
+                                    }
+
+                                    participantSearch.value = '';
+                                    searchResults.style.display = 'none';
+                                });
+                            });
+                        } else {
+                            console.log('⚠️ Пользователи не найдены');
+                            searchResults.innerHTML = '<div style="padding: 12px; text-align: center; color: #999;">Пользователи не найдены</div>';
+                            searchResults.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Ошибка поиска:', error);
+                        searchResults.innerHTML = '<div style="padding: 12px; text-align: center; color: #dc3545;">Ошибка поиска. Попробуйте еще раз.</div>';
+                        searchResults.style.display = 'block';
+                    });
+            }, 300);
+        });
+    }
+
+    function addParticipant(userId, userName, userPhone) {
+        selectedParticipantIds.push(userId);
+
+        const tag = document.createElement('div');
+        tag.className = 'participant-tag';
+        tag.innerHTML = `
+            <i class="fas fa-user"></i>
+            <span>${userName}</span>
+            <i class="fas fa-times remove-participant" data-user-id="${userId}"></i>
+        `;
+
+        tag.querySelector('.remove-participant').addEventListener('click', function() {
+            const id = this.dataset.userId;
+            selectedParticipantIds = selectedParticipantIds.filter(pid => pid !== id);
+            tag.remove();
+            updateInvitedParticipantsInput();
+        });
+
+        selectedParticipants.appendChild(tag);
+        updateInvitedParticipantsInput();
+    }
+
+    function updateInvitedParticipantsInput() {
+        invitedParticipantsInput.value = selectedParticipantIds.join(',');
+    }
+
+    // Закрытие результатов поиска при клике вне
+    document.addEventListener('click', function(e) {
+        if (!participantSearch?.contains(e.target) && !searchResults?.contains(e.target)) {
+            if (searchResults) searchResults.style.display = 'none';
+        }
+    });
 });
 </script>
 
@@ -1649,6 +2062,18 @@ document.addEventListener('DOMContentLoaded', function() {
 // Инициализация FullCalendar при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🎯 Initializing main calendar...');
+
+    // Скрываем индикатор загрузки после загрузки DOM
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) {
+        setTimeout(() => {
+            pageLoader.style.opacity = '0';
+            pageLoader.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                pageLoader.style.display = 'none';
+            }, 300);
+        }, 500); // Показываем минимум 500мс для плавности
+    }
 
     const calendarEl = document.getElementById('main-calendar');
 
@@ -1876,10 +2301,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ========== ОБРАБОТЧИКИ ЗАКРЫТИЯ МОДАЛЬНЫХ ОКОН ==========
+
+    // Прямой обработчик для кнопки закрытия модального окна событий
+    const eventDetailsModal = document.getElementById('eventDetailsModal');
+    if (eventDetailsModal) {
+        const closeBtn = eventDetailsModal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔴 Закрытие модального окна события');
+                eventDetailsModal.style.display = 'none';
+            });
+        }
+
+        // Закрытие при клике вне модального окна
+        eventDetailsModal.addEventListener('click', function(e) {
+            if (e.target === eventDetailsModal) {
+                console.log('🔴 Клик вне модального окна - закрываем');
+                eventDetailsModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Универсальный обработчик для всех модальных окон
     document.addEventListener('click', function(e) {
         // Закрытие по клику на крестик
         if (e.target.classList.contains('close-modal')) {
-            e.target.closest('.modal').style.display = 'none';
+            const modal = e.target.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
 
         // Закрытие по клику вне модального окна
@@ -1899,6 +2351,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // Экспортируем функцию для использования из других мест
+    window.closeEventModal = closeEventModal;
 });
 </script>
 {% endblock %}
