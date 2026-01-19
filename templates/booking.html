@@ -678,6 +678,48 @@
     <p>Выберите дату, корт и время для бронирования</p>
 </div>
 
+<!-- ПРИГЛАШЕНИЯ В ИГРУ -->
+{% if user.is_authenticated and pending_invitations %}
+<div class="invitations-section" style="margin-bottom: 30px;">
+    <div class="section-card" style="background: linear-gradient(135deg, rgba(158, 240, 26, 0.1) 0%, rgba(191, 241, 103, 0.1) 100%); border: 2px solid rgba(158, 240, 26, 0.3);">
+        <h3 style="color: var(--primary-color);"><i class="fas fa-envelope"></i> Приглашения в игру ({{ pending_invitations|length }})</h3>
+
+        <div class="invitations-list" style="display: grid; gap: 15px;">
+            {% for invitation in pending_invitations %}
+            <div class="invitation-item" id="invitation-{{ invitation.id }}" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <div style="font-size: 16px; font-weight: 600; color: var(--text-color); margin-bottom: 8px;">
+                            <i class="fas fa-user"></i> {{ invitation.inviter.get_full_name|default:invitation.inviter.username }}
+                            приглашает вас
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; font-size: 14px; color: var(--gray-color);">
+                            <div><i class="fas fa-calendar"></i> {{ invitation.booking.date|date:"d.m.Y" }}</div>
+                            <div><i class="fas fa-clock"></i> {{ invitation.booking.start_time|time:"H:i" }} - {{ invitation.booking.end_time|time:"H:i" }}</div>
+                            <div><i class="fas fa-map-marker-alt"></i> {{ invitation.booking.court.name }}</div>
+                        </div>
+                        {% if invitation.message %}
+                        <div style="margin-top: 8px; padding: 8px 12px; background: rgba(158, 240, 26, 0.05); border-left: 3px solid var(--primary-color); border-radius: 4px; font-size: 13px; color: var(--gray-color);">
+                            <i class="fas fa-comment"></i> {{ invitation.message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-shrink: 0;">
+                        <button class="btn-primary" onclick="acceptInvitation({{ invitation.id }})" style="padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                            <i class="fas fa-check"></i> Принять
+                        </button>
+                        <button class="btn-secondary" onclick="declineInvitation({{ invitation.id }})" style="padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                            <i class="fas fa-times"></i> Отклонить
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- КАЛЕНДАРЬ FULLCALENDAR -->
 <div class="fullcalendar-wrapper">
     <div id="main-calendar"></div>
@@ -2355,5 +2397,142 @@ document.addEventListener('DOMContentLoaded', function() {
     // Экспортируем функцию для использования из других мест
     window.closeEventModal = closeEventModal;
 });
+
+// ========== ФУНКЦИИ РАБОТЫ С ПРИГЛАШЕНИЯМИ ==========
+
+// Принять приглашение
+function acceptInvitation(invitationId) {
+    if (!confirm('Вы уверены, что хотите принять это приглашение?')) {
+        return;
+    }
+
+    // Получаем CSRF token
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(`/booking/api/invitation/${invitationId}/accept/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Показываем успех
+            if (window.toast) {
+                window.toast.success(data.message);
+            } else {
+                alert(data.message);
+            }
+
+            // Удаляем карточку приглашения из интерфейса
+            const invitationElement = document.getElementById(`invitation-${invitationId}`);
+            if (invitationElement) {
+                invitationElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                invitationElement.style.opacity = '0';
+                invitationElement.style.transform = 'scale(0.95)';
+
+                setTimeout(() => {
+                    invitationElement.remove();
+
+                    // Проверяем, остались ли приглашения
+                    const invitationsList = document.querySelector('.invitations-list');
+                    if (invitationsList && invitationsList.children.length === 0) {
+                        const invitationsSection = document.querySelector('.invitations-section');
+                        if (invitationsSection) {
+                            invitationsSection.remove();
+                        }
+                    }
+                }, 300);
+            }
+
+            // Обновляем календарь если он есть
+            if (window.mainCalendar) {
+                window.mainCalendar.refetchEvents();
+            }
+        } else {
+            // Показываем ошибку
+            if (window.toast) {
+                window.toast.error(data.message);
+            } else {
+                alert(data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при принятии приглашения:', error);
+        if (window.toast) {
+            window.toast.error('Произошла ошибка при принятии приглашения');
+        } else {
+            alert('Произошла ошибка при принятии приглашения');
+        }
+    });
+}
+
+// Отклонить приглашение
+function declineInvitation(invitationId) {
+    if (!confirm('Вы уверены, что хотите отклонить это приглашение?')) {
+        return;
+    }
+
+    // Получаем CSRF token
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(`/booking/api/invitation/${invitationId}/decline/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Показываем успех
+            if (window.toast) {
+                window.toast.info(data.message);
+            } else {
+                alert(data.message);
+            }
+
+            // Удаляем карточку приглашения из интерфейса
+            const invitationElement = document.getElementById(`invitation-${invitationId}`);
+            if (invitationElement) {
+                invitationElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                invitationElement.style.opacity = '0';
+                invitationElement.style.transform = 'scale(0.95)';
+
+                setTimeout(() => {
+                    invitationElement.remove();
+
+                    // Проверяем, остались ли приглашения
+                    const invitationsList = document.querySelector('.invitations-list');
+                    if (invitationsList && invitationsList.children.length === 0) {
+                        const invitationsSection = document.querySelector('.invitations-section');
+                        if (invitationsSection) {
+                            invitationsSection.remove();
+                        }
+                    }
+                }, 300);
+            }
+        } else {
+            // Показываем ошибку
+            if (window.toast) {
+                window.toast.error(data.message);
+            } else {
+                alert(data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при отклонении приглашения:', error);
+        if (window.toast) {
+            window.toast.error('Произошла ошибка при отклонении приглашения');
+        } else {
+            alert('Произошла ошибка при отклонении приглашения');
+        }
+    });
+}
 </script>
 {% endblock %}

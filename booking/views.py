@@ -47,9 +47,21 @@ def booking_page(request):
     """Страница бронирования кортов"""
     courts = Court.objects.filter(is_available=True).order_by('name')
     today_date = timezone.now().date()
+
+    # Получаем приглашения для текущего пользователя
+    pending_invitations = []
+    if request.user.is_authenticated:
+        from booking.models import BookingInvitation
+        pending_invitations = BookingInvitation.objects.filter(
+            invitee=request.user,
+            status='pending',
+            booking__date__gte=today_date  # Только будущие бронирования
+        ).select_related('booking', 'booking__court', 'inviter').order_by('booking__date', 'booking__start_time')
+
     return render(request, 'booking.html', {
         'courts': courts,
-        'today_date': today_date
+        'today_date': today_date,
+        'pending_invitations': pending_invitations
     })
 
 
