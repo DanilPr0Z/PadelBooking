@@ -93,24 +93,37 @@
 <script>
 // Загружаем базовые метрики через API
 document.addEventListener('DOMContentLoaded', function() {
-    // Заглушка - пока API не готово, показываем 0
-    document.getElementById('today-bookings').textContent = '0';
-    document.getElementById('today-revenue').textContent = '0 ₽';
-    document.getElementById('occupancy-rate').textContent = '0%';
-    document.getElementById('new-users').textContent = '0';
+    // Показываем loading state
+    document.getElementById('today-bookings').innerHTML = '<div style="font-size: 20px;">⏳</div>';
+    document.getElementById('today-revenue').innerHTML = '<div style="font-size: 20px;">⏳</div>';
+    document.getElementById('occupancy-rate').innerHTML = '<div style="font-size: 20px;">⏳</div>';
+    document.getElementById('new-users').innerHTML = '<div style="font-size: 20px;">⏳</div>';
 
-    // TODO: Когда будет готово API, раскомментировать:
-    /*
+    // Загружаем реальные данные
     fetch('/admin-panel/api/dashboard-stats/')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('today-bookings').textContent = data.today_bookings || 0;
-            document.getElementById('today-revenue').textContent = (data.today_revenue || 0) + ' ₽';
-            document.getElementById('occupancy-rate').textContent = (data.occupancy_rate || 0) + '%';
-            document.getElementById('new-users').textContent = data.new_users_this_week || 0;
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load stats');
+            return response.json();
         })
-        .catch(error => console.error('Error loading stats:', error));
-    */
+        .then(data => {
+            const stats = data.financial || {};
+            const occupancy = data.occupancy || {};
+            const clients = data.clients || {};
+
+            // Обновляем метрики
+            document.getElementById('today-bookings').textContent = occupancy.total_bookings || 0;
+            document.getElementById('today-revenue').textContent = Math.round(stats.total_revenue || 0).toLocaleString() + ' ₽';
+            document.getElementById('occupancy-rate').textContent = Math.round(occupancy.overall_occupancy_rate || 0) + '%';
+            document.getElementById('new-users').textContent = clients.new_users || 0;
+        })
+        .catch(error => {
+            console.error('Error loading stats:', error);
+            // Показываем 0 при ошибке
+            document.getElementById('today-bookings').textContent = '0';
+            document.getElementById('today-revenue').textContent = '0 ₽';
+            document.getElementById('occupancy-rate').textContent = '0%';
+            document.getElementById('new-users').textContent = '0';
+        });
 });
 </script>
 {% endblock %}

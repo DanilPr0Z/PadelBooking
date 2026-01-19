@@ -26,20 +26,13 @@ function setupUserSearch() {
 
         userSearchTimeout = setTimeout(async () => {
             try {
-                // TODO: Implement actual user search API
-                // For now, this is a placeholder
-                // const response = await fetch(`/api/users/search/?q=${encodeURIComponent(query)}`);
-                // const users = await response.json();
+                const response = await fetch(`/admin-panel/api/users/search/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
 
-                // Mock data for demonstration
-                const users = [
-                    { id: 1, name: 'Иван Иванов', email: 'ivan@example.com' },
-                    { id: 2, name: 'Петр Петров', email: 'petr@example.com' },
-                ];
-
-                displayUserSuggestions(users, suggestionsDiv, searchInput, userIdInput);
+                displayUserSuggestions(data.users || [], suggestionsDiv, searchInput, userIdInput);
             } catch (error) {
                 console.error('Error searching users:', error);
+                displayUserSuggestions([], suggestionsDiv, searchInput, userIdInput);
             }
         }, 300);
     });

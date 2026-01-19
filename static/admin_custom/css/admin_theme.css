@@ -1,0 +1,455 @@
+/**
+ * Django Admin Custom Theme
+ * Современный дизайн в стиле YClient/1C с зеленым акцентом
+ */
+
+/* ========== ЦВЕТОВАЯ ПАЛИТРА ========== */
+:root {
+    --admin-primary: #9ef01a;
+    --admin-primary-dark: #7bc015;
+    --admin-primary-light: #bff167;
+    --admin-secondary: #1e3a5f;
+    --admin-text: #374151;
+    --admin-text-light: #6b7280;
+    --admin-bg: #f5f5f5;
+    --admin-card-bg: #ffffff;
+    --admin-border: #e5e7eb;
+    --admin-success: #10b981;
+    --admin-warning: #f59e0b;
+    --admin-error: #ef4444;
+    --admin-info: #3b82f6;
+}
+
+/* ========== ОБЩИЕ СТИЛИ ========== */
+#container {
+    min-height: 100vh;
+    background: var(--admin-bg);
+}
+
+/* ========== HEADER ========== */
+#header {
+    background: linear-gradient(135deg, var(--admin-secondary) 0%, #2a4a6f 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 15px 20px;
+}
+
+#branding h1 {
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0;
+}
+
+#branding h1 a {
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#branding h1 a:hover {
+    color: var(--admin-primary);
+}
+
+/* User tools */
+#user-tools {
+    text-align: right;
+    padding: 0;
+    margin: 0;
+    font-weight: 500;
+}
+
+#user-tools a {
+    color: white;
+    text-decoration: none;
+    margin-left: 15px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#user-tools a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--admin-primary);
+}
+
+/* ========== BREADCRUMBS ========== */
+div.breadcrumbs {
+    background: white;
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--admin-border);
+    font-size: 14px;
+    color: var(--admin-text-light);
+}
+
+div.breadcrumbs a {
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+div.breadcrumbs a:hover {
+    color: var(--admin-primary-dark);
+    text-decoration: underline;
+}
+
+/* ========== CONTENT ========== */
+#content {
+    padding: 30px;
+    background: var(--admin-bg);
+}
+
+#content h1,
+#content h2,
+#content h3 {
+    color: var(--admin-secondary);
+    font-weight: 600;
+}
+
+/* ========== КАРТОЧКИ ========== */
+.module,
+.dashboard-module {
+    background: var(--admin-card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    border: none;
+    overflow: hidden;
+}
+
+.module h2,
+.dashboard-module h2 {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-light) 100%);
+    color: var(--admin-secondary);
+    padding: 15px 20px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: none;
+}
+
+.module table,
+.dashboard-module table {
+    margin: 0;
+}
+
+/* ========== ФОРМЫ ========== */
+.form-row {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.form-row:last-child {
+    border-bottom: none;
+}
+
+label {
+    color: var(--admin-text);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+textarea,
+select {
+    border: 1px solid var(--admin-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 3px rgba(158, 240, 26, 0.1);
+}
+
+/* ========== КНОПКИ ========== */
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.button {
+    background: var(--admin-primary);
+    color: var(--admin-secondary);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+.submit-row input:hover,
+a.button:hover {
+    background: var(--admin-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(158, 240, 26, 0.3);
+}
+
+.button.default,
+input[type="submit"].default,
+.submit-row input.default {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-light) 100%);
+    box-shadow: 0 4px 15px rgba(158, 240, 26, 0.3);
+}
+
+/* Вторичные кнопки */
+.button.cancel-link,
+a.deletelink {
+    background: #f3f4f6;
+    color: var(--admin-text);
+}
+
+.button.cancel-link:hover,
+a.deletelink:hover {
+    background: #e5e7eb;
+}
+
+/* Опасные кнопки */
+.deletelink-box a.deletelink {
+    background: var(--admin-error);
+    color: white;
+}
+
+.deletelink-box a.deletelink:hover {
+    background: #dc2626;
+}
+
+/* ========== ТАБЛИЦЫ ========== */
+#changelist {
+    background: var(--admin-card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+}
+
+#changelist-filter {
+    background: var(--admin-card-bg);
+    border-left: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+#changelist-filter h2,
+#changelist-filter h3 {
+    color: var(--admin-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+#changelist-filter li.selected a {
+    color: var(--admin-primary);
+    font-weight: 600;
+}
+
+/* Результаты таблицы */
+#result_list {
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#result_list thead th {
+    background: #f9fafb;
+    color: var(--admin-text);
+    font-weight: 600;
+    padding: 12px;
+    border-bottom: 2px solid var(--admin-border);
+}
+
+#result_list tbody tr {
+    transition: background 0.2s ease;
+}
+
+#result_list tbody tr:hover {
+    background: #f9fafb;
+}
+
+#result_list tbody td {
+    padding: 12px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+/* ========== ACTIONS ========== */
+.actions {
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.actions select {
+    border-color: var(--admin-border);
+}
+
+.actions button[type="submit"] {
+    background: var(--admin-primary);
+    color: var(--admin-secondary);
+}
+
+/* ========== ПАГИНАЦИЯ ========== */
+.paginator {
+    font-size: 14px;
+    color: var(--admin-text-light);
+}
+
+.paginator a {
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.paginator a:hover {
+    background: rgba(158, 240, 26, 0.1);
+}
+
+/* ========== СООБЩЕНИЯ ========== */
+.messagelist {
+    margin: 0 0 20px 0;
+    padding: 0;
+}
+
+.messagelist li {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    list-style: none;
+}
+
+.messagelist .success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--admin-success);
+    border-left: 4px solid var(--admin-success);
+}
+
+.messagelist .warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--admin-warning);
+    border-left: 4px solid var(--admin-warning);
+}
+
+.messagelist .error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--admin-error);
+    border-left: 4px solid var(--admin-error);
+}
+
+.messagelist .info {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--admin-info);
+    border-left: 4px solid var(--admin-info);
+}
+
+/* ========== ИНЛАЙНЫ ========== */
+.inline-group {
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.inline-group h2 {
+    background: none;
+    color: var(--admin-secondary);
+    padding: 0 0 10px 0;
+    margin: 0;
+    border-bottom: 2px solid var(--admin-border);
+}
+
+/* ========== DASHBOARD MODULES ========== */
+#content-main .module {
+    float: none;
+    width: 100%;
+}
+
+.dashboard .module table {
+    width: 100%;
+}
+
+.dashboard .module table th {
+    width: auto;
+}
+
+/* ========== АДАПТИВНОСТЬ ========== */
+@media (max-width: 768px) {
+    #content {
+        padding: 15px;
+    }
+
+    .module h2,
+    .dashboard-module h2 {
+        font-size: 14px;
+        padding: 12px 15px;
+    }
+
+    .form-row {
+        padding: 12px 15px;
+    }
+
+    #changelist-filter {
+        margin-top: 20px;
+    }
+}
+
+/* ========== АНИМАЦИИ ========== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.module,
+.dashboard-module,
+#changelist {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--admin-border);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--admin-primary);
+}

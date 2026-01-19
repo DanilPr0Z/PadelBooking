@@ -14,50 +14,11 @@
 
 {% block extrastyle %}
 {{ block.super }}
+<!-- Подключаем кастомную тему админки -->
+<link rel="stylesheet" href="{% static 'admin_custom/css/admin_theme.css' %}">
+
 <style>
-    /* Стили для админ-панели в стиле YClient/1C */
-
-    #header {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
-        color: white;
-    }
-
-    #header a:link,
-    #header a:visited {
-        color: #9ef01a;
-    }
-
-    #header a:hover {
-        color: #bff167;
-    }
-
-    .module h2,
-    .module caption {
-        background: #9ef01a;
-        color: #1e3a5f;
-        font-weight: 600;
-    }
-
-    .button,
-    input[type=submit],
-    input[type=button],
-    .submit-row input,
-    a.button {
-        background: #9ef01a;
-        color: #1e3a5f;
-        border: none;
-        font-weight: 600;
-    }
-
-    .button:hover,
-    input[type=submit]:hover,
-    input[type=button]:hover,
-    .submit-row input:hover,
-    a.button:hover {
-        background: #7cc00f;
-    }
-
-    /* Кастомные ссылки в шапке */
+    /* Дополнительные стили для навигации */
     #user-tools {
         display: flex;
         align-items: center;

@@ -122,6 +122,59 @@ def dashboard_stats_api(request):
 
 
 @staff_member_required
+def search_users_api(request):
+    """
+    API: Поиск пользователей для создания бронирований
+    GET /admin-panel/api/users/search/?q=ivan
+    """
+    try:
+        query = request.GET.get('q', '').strip()
+
+        if len(query) < 2:
+            return JsonResponse({
+                'users': []
+            })
+
+        from django.contrib.auth.models import User
+        from django.db.models import Q
+
+        # Поиск по имени, фамилии, username, email
+        users = User.objects.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query) |
+            Q(email__icontains=query)
+        )[:10]  # Ограничиваем результаты
+
+        users_data = []
+        for user in users:
+            full_name = user.get_full_name()
+            display_name = full_name if full_name else user.username
+
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'name': display_name,
+                'email': user.email,
+                'phone': getattr(user, 'phone', '')  # Если есть поле телефона
+            })
+
+        return JsonResponse({
+            'users': users_data
+        })
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in search_users_api: {str(e)}", exc_info=True)
+
+        return JsonResponse({
+            'error': str(e),
+            'users': []
+        }, status=500)
+
+
+@staff_member_required
 def export_excel(request):
     """
     Экспорт данных в Excel

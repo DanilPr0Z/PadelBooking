@@ -11,5 +11,6 @@ urlpatterns = [
 
     # API и экспорт
     path('api/dashboard-stats/', admin_views.dashboard_stats_api, name='admin_dashboard_stats_api'),
+    path('api/users/search/', admin_views.search_users_api, name='admin_search_users_api'),
     path('export/excel/', admin_views.export_excel, name='admin_export_excel'),
 ]
