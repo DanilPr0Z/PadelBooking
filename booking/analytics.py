@@ -46,50 +46,64 @@ def get_financial_stats(start_date=None, end_date=None):
         count=Count('id')
     )
 
-    # Динамика дохода по дням
-    daily_revenue = bookings.annotate(
-        day=TruncDate('date')
-    ).values('day').annotate(
-        revenue=Sum(
-            F('court__price_per_hour') *
-            (F('end_time__hour') - F('start_time__hour')),
-            output_field=DecimalField()
-        ),
-        bookings_count=Count('id')
-    ).order_by('day')
+    # Динамика дохода по дням (вычисляем в Python из-за ограничений SQLite)
+    daily_data = {}
+    for booking in bookings:
+        day = booking.date
+        hours = (booking.end_time.hour - booking.start_time.hour)
+        revenue = float(booking.court.price_per_hour) * hours
 
-    # Динамика по месяцам (последние 12)
+        if day not in daily_data:
+            daily_data[day] = {'day': day, 'revenue': 0, 'bookings_count': 0}
+        daily_data[day]['revenue'] += revenue
+        daily_data[day]['bookings_count'] += 1
+
+    daily_revenue = sorted(daily_data.values(), key=lambda x: x['day'])
+
+    # Динамика по месяцам (последние 12) - также вычисляем в Python
     twelve_months_ago = today - timedelta(days=365)
-    monthly_revenue = Booking.objects.filter(
+    monthly_bookings = Booking.objects.filter(
         date__gte=twelve_months_ago,
         status='confirmed'
-    ).annotate(
-        month=TruncMonth('date')
-    ).values('month').annotate(
-        revenue=Sum(
-            F('court__price_per_hour') *
-            (F('end_time__hour') - F('start_time__hour')),
-            output_field=DecimalField()
-        ),
-        bookings_count=Count('id')
-    ).order_by('month')
+    ).select_related('court').order_by('date')
+
+    monthly_data = {}
+    for booking in monthly_bookings:
+        month = booking.date.replace(day=1)  # Первый день месяца
+        hours = (booking.end_time.hour - booking.start_time.hour)
+        revenue = float(booking.court.price_per_hour) * hours
+
+        if month not in monthly_data:
+            monthly_data[month] = {'month': month, 'revenue': 0, 'bookings_count': 0}
+        monthly_data[month]['revenue'] += revenue
+        monthly_data[month]['bookings_count'] += 1
+
+    monthly_revenue = sorted(monthly_data.values(), key=lambda x: x['month'])
 
     # Прогноз на следующий месяц (средний доход * 30 дней)
     days_in_period = max((end_date - start_date).days, 1)
     avg_daily_revenue = total_revenue / days_in_period
     forecast_next_month = avg_daily_revenue * 30
 
-    # Топ источники дохода (корты)
-    revenue_by_court = bookings.values(
-        'court__id', 'court__name'
-    ).annotate(
-        revenue=Sum(
-            F('court__price_per_hour') *
-            (F('end_time__hour') - F('start_time__hour')),
-            output_field=DecimalField()
-        ),
-        bookings_count=Count('id')
-    ).order_by('-revenue')
+    # Топ источники дохода (корты) - вычисляем в Python
+    court_data = {}
+    for booking in bookings:
+        court_id = booking.court.id
+        court_name = booking.court.name
+        hours = (booking.end_time.hour - booking.start_time.hour)
+        revenue = float(booking.court.price_per_hour) * hours
+
+        if court_id not in court_data:
+            court_data[court_id] = {
+                'court__id': court_id,
+                'court__name': court_name,
+                'revenue': 0,
+                'bookings_count': 0
+            }
+        court_data[court_id]['revenue'] += revenue
+        court_data[court_id]['bookings_count'] += 1
+
+    revenue_by_court = sorted(court_data.values(), key=lambda x: x['revenue'], reverse=True)
 
     return {
         'total_revenue': float(total_revenue),
@@ -146,56 +160,73 @@ def get_occupancy_stats(start_date=None, end_date=None):
     # Процент загруженности
     occupancy_rate = (total_booked_hours / total_possible_hours * 100) if total_possible_hours > 0 else 0
 
-    # Загруженность по кортам
-    court_occupancy = bookings.values(
-        'court__id', 'court__name'
-    ).annotate(
-        booked_hours=Sum(
-            F('end_time__hour') - F('start_time__hour'),
-            output_field=DecimalField()
-        ),
-        bookings_count=Count('id')
-    ).order_by('-booked_hours')
+    # Загруженность по кортам - вычисляем в Python
+    court_stats = {}
+    for booking in bookings:
+        court_id = booking.court.id
+        court_name = booking.court.name
+        hours = (booking.end_time.hour - booking.start_time.hour)
+
+        if court_id not in court_stats:
+            court_stats[court_id] = {
+                'court__id': court_id,
+                'court__name': court_name,
+                'booked_hours': 0,
+                'bookings_count': 0
+            }
+        court_stats[court_id]['booked_hours'] += hours
+        court_stats[court_id]['bookings_count'] += 1
 
     # Добавляем процент для каждого корта
     court_occupancy_list = []
-    for court in court_occupancy:
+    for court in court_stats.values():
         possible = WORKING_HOURS * days_in_period
-        court['occupancy_rate'] = (float(court['booked_hours']) / possible * 100) if possible > 0 else 0
+        court['occupancy_rate'] = (court['booked_hours'] / possible * 100) if possible > 0 else 0
         court_occupancy_list.append(court)
 
-    # Загруженность по часам (пиковые часы)
-    hourly_occupancy = bookings.annotate(
-        hour=ExtractHour('start_time')
-    ).values('hour').annotate(
-        bookings_count=Count('id')
-    ).order_by('hour')
+    court_occupancy_list.sort(key=lambda x: x['booked_hours'], reverse=True)
 
-    # Загруженность по дням недели (0=Sunday, 1=Monday, etc.)
-    weekday_occupancy = bookings.annotate(
-        weekday=ExtractWeekDay('date')
-    ).values('weekday').annotate(
-        bookings_count=Count('id'),
-        hours=Sum(
-            F('end_time__hour') - F('start_time__hour'),
-            output_field=DecimalField()
-        )
-    ).order_by('weekday')
+    # Загруженность по часам (пиковые часы) - вычисляем в Python
+    hourly_stats = {}
+    for booking in bookings:
+        hour = booking.start_time.hour
+        if hour not in hourly_stats:
+            hourly_stats[hour] = {'hour': hour, 'bookings_count': 0}
+        hourly_stats[hour]['bookings_count'] += 1
 
-    # Загруженность тренеров
-    coach_occupancy = bookings.filter(
-        coach__isnull=False
-    ).values(
-        'coach__id',
-        'coach__first_name',
-        'coach__last_name'
-    ).annotate(
-        sessions_count=Count('id'),
-        total_hours=Sum(
-            F('end_time__hour') - F('start_time__hour'),
-            output_field=DecimalField()
-        )
-    ).order_by('-sessions_count')
+    hourly_occupancy = sorted(hourly_stats.values(), key=lambda x: x['hour'])
+
+    # Загруженность по дням недели - вычисляем в Python
+    weekday_stats = {}
+    for booking in bookings:
+        weekday = booking.date.isoweekday()  # 1=Monday, 7=Sunday
+        hours = (booking.end_time.hour - booking.start_time.hour)
+
+        if weekday not in weekday_stats:
+            weekday_stats[weekday] = {'weekday': weekday, 'bookings_count': 0, 'hours': 0}
+        weekday_stats[weekday]['bookings_count'] += 1
+        weekday_stats[weekday]['hours'] += hours
+
+    weekday_occupancy = sorted(weekday_stats.values(), key=lambda x: x['weekday'])
+
+    # Загруженность тренеров - вычисляем в Python
+    coach_stats = {}
+    for booking in bookings.filter(coach__isnull=False):
+        coach_id = booking.coach.id
+        hours = (booking.end_time.hour - booking.start_time.hour)
+
+        if coach_id not in coach_stats:
+            coach_stats[coach_id] = {
+                'coach__id': coach_id,
+                'coach__first_name': booking.coach.first_name,
+                'coach__last_name': booking.coach.last_name,
+                'sessions_count': 0,
+                'total_hours': 0
+            }
+        coach_stats[coach_id]['sessions_count'] += 1
+        coach_stats[coach_id]['total_hours'] += hours
+
+    coach_occupancy = sorted(coach_stats.values(), key=lambda x: x['sessions_count'], reverse=True)
 
     return {
         'overall_occupancy_rate': round(occupancy_rate, 2),
