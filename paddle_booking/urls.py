@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -6,11 +5,8 @@ from django.views.generic import TemplateView
 from . import views
 
 urlpatterns = [
-                  path('admin/', admin.site.urls),
-
-                  # Кастомная админ-панель (требует staff права)
-                  path('admin-panel/', include('users.admin_urls')),
-                  path('admin-panel/schedule/', include('booking.admin_urls')),
+                  # Кастомная админ-панель (Manager) - требует staff права
+                  path('admin/', include('manager.urls')),
 
                   # Главная страница
                   path('', views.home, name='home'),

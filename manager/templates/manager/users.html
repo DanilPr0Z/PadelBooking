@@ -1,0 +1,852 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Пользователи{% endblock %}
+{% block page_title %}Управление пользователями{% endblock %}
+
+{% block header_actions %}
+<div style="display: flex; gap: 12px; align-items: center;">
+    <input type="search" id="searchInput" placeholder="Поиск пользователей..." class="search-input" onkeyup="filterUsers()">
+    <select id="roleFilter" class="form-select" onchange="filterUsers()">
+        <option value="">Все роли</option>
+        <option value="staff">Персонал</option>
+        <option value="regular">Обычные</option>
+    </select>
+    <button class="btn btn-primary" onclick="showAddUserModal()">
+        <i class="fas fa-plus"></i> Добавить пользователя
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Summary -->
+<div class="metrics-grid" style="margin-bottom: 24px;">
+    <div class="stat-card">
+        <div class="stat-label">Всего пользователей</div>
+        <div class="stat-value" id="totalUsers">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Активных за 30 дней</div>
+        <div class="stat-value" id="activeUsers">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Новых за месяц</div>
+        <div class="stat-value" id="newUsers">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Персонал</div>
+        <div class="stat-value" id="staffUsers">0</div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Список пользователей <span style="font-size: 12px; color: var(--text-light);">(последние 100)</span></h3>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-secondary" onclick="exportUsers()">
+                <i class="fas fa-download"></i> Экспорт всех
+            </button>
+        </div>
+    </div>
+
+    <div id="usersContainer">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
+
+<!-- User Detail Modal -->
+<div id="userModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Профиль пользователя</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- User details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit User Modal -->
+<div id="userFormModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="formModalTitle">Добавить пользователя</h3>
+            <button class="modal-close" onclick="closeFormModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="userForm" onsubmit="submitUserForm(event)">
+                <input type="hidden" id="userId" value="">
+
+                <div class="form-group">
+                    <label for="username">Username <span style="color: red;">*</span></label>
+                    <input type="text" id="username" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email <span style="color: red;">*</span></label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phoneNumber">Телефон <span style="color: red;">*</span></label>
+                        <input type="tel" id="phoneNumber" class="form-control" placeholder="+79123456789" required>
+                        <small class="form-text">Формат: +79123456789</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="emailVerified">
+                            <span>Email подтверждён</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">Имя</label>
+                        <input type="text" id="firstName" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">Фамилия</label>
+                        <input type="text" id="lastName" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ratingLevel">Уровень игры</label>
+                    <select id="ratingLevel" class="form-control">
+                        <option value="">Не указан</option>
+                        <option value="D">D - Новичок</option>
+                        <option value="D+">D+ - Начинающий</option>
+                        <option value="C-">C- - Начинающий/Слабый средний</option>
+                        <option value="C">C - Средний</option>
+                        <option value="C+">C+ - Средний/Крепкий любитель</option>
+                        <option value="B-">B- - Крепкий любитель</option>
+                        <option value="B">B - Продвинутый</option>
+                        <option value="B+">B+ - Топ-любитель</option>
+                        <option value="A">A - Кандидат/Мастер спорта</option>
+                        <option value="PRO">PRO - Профессионал</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Пароль <span id="passwordRequired" style="color: red;">*</span></label>
+                    <input type="password" id="password" class="form-control">
+                    <small class="form-text">Оставьте пустым для сохранения текущего пароля</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isStaff">
+                            <span>Персонал (доступ к админке)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isActive" checked>
+                            <span>Активный</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isSuperuser">
+                        <span>Суперпользователь (полный доступ)</span>
+                    </label>
+                    <small class="form-text">⚠️ Осторожно! Суперпользователь имеет все права</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeFormModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allUsers = [];
+let filteredUsers = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+});
+
+function loadUsers() {
+    fetch('/admin/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allUsers = data.users;
+                filteredUsers = allUsers;
+                updateStats(data.stats);
+                displayUsers();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading users:', error);
+            document.getElementById('usersContainer').innerHTML =
+                '<div class="error-message">Ошибка загрузки данных</div>';
+        });
+}
+
+function updateStats(stats) {
+    document.getElementById('totalUsers').textContent = stats.total_users;
+    document.getElementById('activeUsers').textContent = stats.active_users;
+    document.getElementById('newUsers').textContent = stats.new_users;
+    document.getElementById('staffUsers').textContent = stats.staff_users;
+}
+
+function displayUsers() {
+    const container = document.getElementById('usersContainer');
+
+    if (filteredUsers.length === 0) {
+        container.innerHTML = '<div class="empty-state">Пользователи не найдены</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr>';
+    html += '<th>ID</th>';
+    html += '<th>Имя</th>';
+    html += '<th>Email</th>';
+    html += '<th>Телефон</th>';
+    html += '<th>Уровень игры</th>';
+    html += '<th>Роль</th>';
+    html += '<th>Бронирований</th>';
+    html += '<th>Потрачено</th>';
+    html += '<th>Зарегистрирован</th>';
+    html += '<th>Действия</th>';
+    html += '</tr></thead><tbody>';
+
+    filteredUsers.forEach(user => {
+        const roleBadge = user.is_staff
+            ? '<span class="badge badge-warning">Персонал</span>'
+            : '<span class="badge badge-secondary">Клиент</span>';
+
+        // Формируем прогресс-бар для уровня игры
+        let ratingHtml = '<span style="color: #999;">Не указан</span>';
+        if (user.rating_level) {
+            const progress = user.rating_progress || 0;
+            const levelColors = {
+                'D': '#6c757d', 'D+': '#6c757d',
+                'C-': '#17a2b8', 'C': '#17a2b8', 'C+': '#17a2b8',
+                'B-': '#28a745', 'B': '#28a745', 'B+': '#28a745',
+                'A': '#ffc107', 'PRO': '#dc3545'
+            };
+            const color = levelColors[user.rating_level] || '#6c757d';
+            ratingHtml = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong style="min-width: 40px; font-size: 14px;">${user.rating_level}</strong>
+                    <div style="flex: 1; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden;">
+                        <div style="width: ${progress}%; background: ${color}; height: 100%; transition: width 0.3s;"></div>
+                    </div>
+                    <span style="font-size: 11px; color: #999; min-width: 35px;">${Math.round(progress)}%</span>
+                </div>
+            `;
+        }
+
+        html += `<tr>
+            <td>#${user.id}</td>
+            <td>${user.full_name || user.username}</td>
+            <td>${user.email}</td>
+            <td>${user.phone || '-'}</td>
+            <td>${ratingHtml}</td>
+            <td>${roleBadge}</td>
+            <td>${user.bookings_count}</td>
+            <td>${formatNumber(user.total_spent)} ₽</td>
+            <td>${formatDate(user.date_joined)}</td>
+            <td>
+                <button class="btn-icon" onclick="viewUser(${user.id})" title="Просмотр">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-icon" onclick="editUser(${user.id})" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon" onclick="viewUserBookings(${user.id})" title="Бронирования">
+                    <i class="fas fa-calendar"></i>
+                </button>
+                <button class="btn-icon btn-danger" onclick="deleteUser(${user.id})" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function filterUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const roleFilter = document.getElementById('roleFilter').value;
+
+    filteredUsers = allUsers.filter(user => {
+        const matchesSearch =
+            user.username.toLowerCase().includes(searchTerm) ||
+            user.email.toLowerCase().includes(searchTerm) ||
+            (user.full_name && user.full_name.toLowerCase().includes(searchTerm));
+
+        const matchesRole = !roleFilter ||
+            (roleFilter === 'staff' && user.is_staff) ||
+            (roleFilter === 'regular' && !user.is_staff);
+
+        return matchesSearch && matchesRole;
+    });
+
+    displayUsers();
+}
+
+function viewUser(id) {
+    fetch(`/manager/api/users/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showUserModal(data.user);
+            }
+        });
+}
+
+function showUserModal(user) {
+    const modal = document.getElementById('userModal');
+    const body = document.getElementById('modalBody');
+
+    body.innerHTML = `
+        <div class="user-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    ${user.full_name ? user.full_name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}
+                </div>
+                <div class="profile-info">
+                    <h3>${user.full_name || user.username}</h3>
+                    <p>${user.email}</p>
+                    ${user.is_staff ? '<span class="badge badge-warning">Персонал</span>' : '<span class="badge badge-secondary">Клиент</span>'}
+                </div>
+            </div>
+
+            <div class="profile-details">
+                <div class="detail-row">
+                    <span class="detail-label">Username:</span>
+                    <span class="detail-value">${user.username}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Зарегистрирован:</span>
+                    <span class="detail-value">${formatDate(user.date_joined)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Последний вход:</span>
+                    <span class="detail-value">${user.last_login ? formatDate(user.last_login) : 'Никогда'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Всего бронирований:</span>
+                    <span class="detail-value">${user.bookings_count}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Всего потрачено:</span>
+                    <span class="detail-value">${formatNumber(user.total_spent)} ₽</span>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button class="btn btn-primary" onclick="editUser(${user.id})">
+                    <i class="fas fa-edit"></i> Редактировать
+                </button>
+                <button class="btn btn-secondary" onclick="viewUserBookings(${user.id})">
+                    <i class="fas fa-calendar"></i> Бронирования
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('userModal').style.display = 'none';
+}
+
+function editUser(id) {
+    showEditUserModal(id);
+}
+
+function viewUserBookings(id) {
+    window.location.href = `/admin/bookings/?user=${id}`;
+}
+
+function showAddUserModal() {
+    document.getElementById('formModalTitle').textContent = 'Добавить пользователя';
+    document.getElementById('userId').value = '';
+    document.getElementById('userForm').reset();
+    document.getElementById('username').readOnly = false;
+    document.getElementById('password').required = true;
+    document.getElementById('passwordRequired').style.display = 'inline';
+    document.getElementById('isActive').checked = true;
+    document.getElementById('userFormModal').style.display = 'flex';
+}
+
+function showEditUserModal(userId) {
+    document.getElementById('formModalTitle').textContent = 'Редактировать пользователя';
+    document.getElementById('userId').value = userId;
+    document.getElementById('password').required = false;
+    document.getElementById('passwordRequired').style.display = 'none';
+
+    // Загрузка данных пользователя
+    fetch(`/admin/api/users/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const user = data.user;
+                document.getElementById('username').value = user.username;
+                document.getElementById('username').readOnly = true; // Username нельзя менять
+                document.getElementById('email').value = user.email;
+                document.getElementById('phoneNumber').value = user.phone || '';
+                document.getElementById('emailVerified').checked = user.email_verified || false;
+                document.getElementById('firstName').value = user.first_name || '';
+                document.getElementById('lastName').value = user.last_name || '';
+                document.getElementById('ratingLevel').value = user.rating_level || '';
+                document.getElementById('isStaff').checked = user.is_staff;
+                document.getElementById('isActive').checked = user.is_active;
+                document.getElementById('isSuperuser').checked = user.is_superuser || false;
+                document.getElementById('password').value = '';
+
+                document.getElementById('userFormModal').style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading user:', error);
+            alert('Ошибка загрузки данных пользователя');
+        });
+}
+
+function closeFormModal() {
+    document.getElementById('userFormModal').style.display = 'none';
+    document.getElementById('userForm').reset();
+}
+
+function submitUserForm(event) {
+    event.preventDefault();
+
+    const userId = document.getElementById('userId').value;
+    const isEdit = userId !== '';
+
+    const userData = {
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        phone_number: document.getElementById('phoneNumber').value,
+        email_verified: document.getElementById('emailVerified').checked,
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        is_staff: document.getElementById('isStaff').checked,
+        is_active: document.getElementById('isActive').checked,
+        is_superuser: document.getElementById('isSuperuser').checked,
+        rating_level: document.getElementById('ratingLevel').value || null,
+    };
+
+    const password = document.getElementById('password').value;
+    if (password) {
+        userData.password = password;
+    }
+
+    const url = isEdit
+        ? `/admin/api/users/${userId}/update/`
+        : '/admin/api/users/create/';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeFormModal();
+            loadUsers(); // Перезагрузка списка пользователей
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при сохранении');
+    });
+}
+
+function deleteUser(userId) {
+    if (!confirm('Вы уверены, что хотите удалить этого пользователя? Это действие необратимо!')) {
+        return;
+    }
+
+    fetch(`/admin/api/users/${userId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            loadUsers(); // Перезагрузка списка пользователей
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при удалении');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function exportUsers() {
+    window.location.href = '/admin/api/users/export/';
+}
+
+function formatNumber(num) {
+    return Math.round(num).toLocaleString('ru-RU');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {day: '2-digit', month: 'short', year: 'numeric'});
+}
+
+// Close modal on outside click
+window.onclick = function(event) {
+    const modal = document.getElementById('userModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>
+
+<style>
+.search-input {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    min-width: 300px;
+}
+
+.form-select {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table thead {
+    background: var(--bg);
+    border-bottom: 2px solid var(--border);
+}
+
+.data-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg);
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-secondary {
+    background: var(--bg);
+    color: var(--text-light);
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 6px 8px;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.2s;
+}
+
+.btn-icon:hover {
+    color: var(--primary);
+}
+
+.empty-state, .error-message {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--text-light);
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+/* User Profile */
+.user-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 24px;
+}
+
+.profile-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+}
+
+.profile-info p {
+    margin: 0 0 8px 0;
+    color: var(--text-light);
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.detail-value {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.profile-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.form-control:read-only {
+    background-color: var(--bg);
+    cursor: not-allowed;
+}
+
+.form-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.btn-danger {
+    color: #dc2626 !important;
+}
+
+.btn-danger:hover {
+    color: #991b1b !important;
+}
+</style>
+{% endblock %}

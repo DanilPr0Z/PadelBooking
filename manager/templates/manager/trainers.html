@@ -1,0 +1,874 @@
+{% extends 'manager/base.html' %}
+{% load static %}
+
+{% block title %}Тренеры{% endblock %}
+{% block page_title %}Управление тренерами{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-primary" onclick="showAddTrainerModal()">
+    <i class="fas fa-plus"></i> Добавить тренера
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <i class="fas fa-user-tie"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalTrainers">0</div>
+            <div class="stat-label">Всего тренеров</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="activeTrainers">0</div>
+            <div class="stat-label">Активные</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalStudents">0</div>
+            <div class="stat-label">Всего учеников</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalHours">0</div>
+            <div class="stat-label">Часов тренировок</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar" style="margin-top: 24px;">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Поиск тренера..." onkeyup="filterTrainers()">
+    </div>
+
+    <div class="filter-group">
+        <select id="statusFilter" class="filter-select" onchange="filterTrainers()">
+            <option value="">Все статусы</option>
+            <option value="active">Активные</option>
+            <option value="inactive">Неактивные</option>
+        </select>
+    </div>
+</div>
+
+<!-- Trainers Grid -->
+<div id="trainersContainer" class="trainers-grid" style="margin-top: 24px;">
+    <!-- Will be populated by JS -->
+</div>
+
+<!-- Add/Edit Trainer Modal -->
+<div id="trainerFormModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="formModalTitle">Добавить тренера</h3>
+            <button class="modal-close" onclick="closeFormModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="trainerForm" onsubmit="submitTrainerForm(event)">
+                <input type="hidden" id="trainerId" value="">
+                <input type="hidden" id="userId" value="">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="trainerUser">Выбрать пользователя <span style="color: red;">*</span></label>
+                        <select id="trainerUser" class="form-control" required>
+                            <option value="">Выберите пользователя</option>
+                        </select>
+                        <small class="form-text">Или введите данные нового пользователя ниже</small>
+                    </div>
+                </div>
+
+                <div class="form-divider">или создать нового</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">Имя</label>
+                        <input type="text" id="firstName" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">Фамилия</label>
+                        <input type="text" id="lastName" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Телефон</label>
+                        <input type="tel" id="phone" class="form-control" placeholder="+79123456789">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="qualifications">Квалификация</label>
+                    <textarea id="qualifications" class="form-control" rows="3" placeholder="Сертификаты, достижения..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="specialization">Специализация</label>
+                    <input type="text" id="specialization" class="form-control" placeholder="Например: начинающие, дети">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="experienceYears">Опыт (лет)</label>
+                        <input type="number" id="experienceYears" class="form-control" value="0" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hourlyRate">Часовая ставка (₽)</label>
+                        <input type="number" id="hourlyRate" class="form-control" value="0" min="0" step="100">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bio">О себе</label>
+                    <textarea id="bio" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isActive" checked>
+                        <span>Активен</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeFormModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Trainer Detail Modal -->
+<div id="trainerModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3>Профиль тренера</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Will be populated by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Trainer Schedule Modal -->
+<div id="scheduleModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h3 id="scheduleModalTitle">Расписание тренера</h3>
+            <button class="modal-close" onclick="closeScheduleModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="trainerCalendar"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
+<script>
+let allTrainers = [];
+let filteredTrainers = [];
+let allUsers = [];
+let currentTrainerCalendar = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTrainers();
+    loadUsers();
+});
+
+function loadTrainers() {
+    fetch('/admin/api/trainers/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allTrainers = data.trainers;
+                filteredTrainers = allTrainers;
+                updateStats(data.stats);
+                displayTrainers();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading trainers:', error);
+            document.getElementById('trainersContainer').innerHTML =
+                '<div class="error-message">Ошибка загрузки данных</div>';
+        });
+}
+
+function loadUsers() {
+    fetch('/admin/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allUsers = data.users;
+                populateUserSelect();
+            }
+        });
+}
+
+function populateUserSelect() {
+    const select = document.getElementById('trainerUser');
+    select.innerHTML = '<option value="">Выберите пользователя</option>';
+
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.full_name || user.username} (${user.email})`;
+        select.appendChild(option);
+    });
+}
+
+function updateStats(stats) {
+    document.getElementById('totalTrainers').textContent = stats.total_trainers;
+    document.getElementById('activeTrainers').textContent = stats.active_trainers;
+    document.getElementById('totalStudents').textContent = stats.total_students;
+    document.getElementById('totalHours').textContent = stats.total_hours;
+}
+
+function displayTrainers() {
+    const container = document.getElementById('trainersContainer');
+
+    if (filteredTrainers.length === 0) {
+        container.innerHTML = '<div class="empty-state">Тренеры не найдены</div>';
+        return;
+    }
+
+    let html = '';
+    filteredTrainers.forEach(trainer => {
+        const statusBadge = trainer.is_active
+            ? '<span class="badge badge-success">Активен</span>'
+            : '<span class="badge badge-secondary">Неактивен</span>';
+
+        html += `
+            <div class="trainer-card">
+                <div class="trainer-header">
+                    <div class="trainer-avatar">
+                        ${(trainer.user_first_name || trainer.user_username).charAt(0).toUpperCase()}
+                    </div>
+                    <div class="trainer-info">
+                        <h3>${trainer.user_full_name || trainer.user_username}</h3>
+                        <p class="trainer-specialization">${trainer.specialization || 'Специализация не указана'}</p>
+                    </div>
+                    ${statusBadge}
+                </div>
+
+                <div class="trainer-stats">
+                    <div class="trainer-stat">
+                        <i class="fas fa-star"></i>
+                        <span>${trainer.coach_rating.toFixed(1)}</span>
+                        <small>Рейтинг</small>
+                    </div>
+                    <div class="trainer-stat">
+                        <i class="fas fa-users"></i>
+                        <span>${trainer.students_count}</span>
+                        <small>Учеников</small>
+                    </div>
+                    <div class="trainer-stat">
+                        <i class="fas fa-clock"></i>
+                        <span>${trainer.experience_years}</span>
+                        <small>Лет опыта</small>
+                    </div>
+                    <div class="trainer-stat">
+                        <i class="fas fa-ruble-sign"></i>
+                        <span>${formatNumber(trainer.hourly_rate)}</span>
+                        <small>₽/час</small>
+                    </div>
+                </div>
+
+                <div class="trainer-actions">
+                    <button class="btn btn-sm btn-outline" onclick="viewTrainerSchedule(${trainer.id}, '${trainer.user_full_name || trainer.user_username}')">
+                        <i class="fas fa-calendar"></i> Расписание
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="viewTrainer(${trainer.id})">
+                        <i class="fas fa-eye"></i> Детали
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="editTrainer(${trainer.id})">
+                        <i class="fas fa-edit"></i> Изменить
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTrainer(${trainer.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function filterTrainers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+
+    filteredTrainers = allTrainers.filter(trainer => {
+        const matchesSearch = (trainer.user_full_name || trainer.user_username).toLowerCase().includes(searchTerm) ||
+                            (trainer.specialization || '').toLowerCase().includes(searchTerm);
+
+        const matchesStatus = statusFilter === '' ||
+                            (statusFilter === 'active' && trainer.is_active) ||
+                            (statusFilter === 'inactive' && !trainer.is_active);
+
+        return matchesSearch && matchesStatus;
+    });
+
+    displayTrainers();
+}
+
+function viewTrainer(id) {
+    fetch(`/admin/api/trainers/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showTrainerModal(data.trainer);
+            }
+        });
+}
+
+function showTrainerModal(trainer) {
+    const modal = document.getElementById('trainerModal');
+    const body = document.getElementById('modalBody');
+
+    body.innerHTML = `
+        <div class="trainer-profile">
+            <div class="profile-header">
+                <div class="profile-avatar-large">
+                    ${(trainer.user_first_name || trainer.user_username).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <h2>${trainer.user_full_name || trainer.user_username}</h2>
+                    <p style="color: #666;">${trainer.user_email}</p>
+                    <p style="color: #666;">${trainer.user_phone || 'Телефон не указан'}</p>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Информация о тренере</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Квалификация:</span>
+                    <span class="detail-value">${trainer.qualifications || 'Не указана'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Специализация:</span>
+                    <span class="detail-value">${trainer.specialization || 'Не указана'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Опыт работы:</span>
+                    <span class="detail-value">${trainer.experience_years} лет</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Часовая ставка:</span>
+                    <span class="detail-value">${formatNumber(trainer.hourly_rate)} ₽</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Рейтинг тренера:</span>
+                    <span class="detail-value">${trainer.coach_rating.toFixed(1)} / 5.0</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Статус:</span>
+                    <span class="detail-value">${trainer.is_active ? '<span class="badge badge-success">Активен</span>' : '<span class="badge badge-secondary">Неактивен</span>'}</span>
+                </div>
+            </div>
+
+            ${trainer.bio ? `
+            <div class="profile-section">
+                <h3>О себе</h3>
+                <p>${trainer.bio}</p>
+            </div>
+            ` : ''}
+
+            <div class="profile-section">
+                <h3>Статистика</h3>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-number">${trainer.students_count}</div>
+                        <div class="stat-title">Учеников</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${trainer.sessions_count || 0}</div>
+                        <div class="stat-title">Тренировок</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${trainer.total_hours || 0}</div>
+                        <div class="stat-title">Часов работы</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button class="btn btn-primary" onclick="viewTrainerSchedule(${trainer.id}, '${trainer.user_full_name || trainer.user_username}'); closeModal();">
+                    <i class="fas fa-calendar"></i> Расписание
+                </button>
+                <button class="btn btn-secondary" onclick="editTrainer(${trainer.id}); closeModal();">
+                    <i class="fas fa-edit"></i> Редактировать
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function viewTrainerSchedule(trainerId, trainerName) {
+    document.getElementById('scheduleModalTitle').textContent = `Расписание: ${trainerName}`;
+    document.getElementById('scheduleModal').style.display = 'flex';
+
+    // Initialize calendar
+    const calendarEl = document.getElementById('trainerCalendar');
+    calendarEl.innerHTML = ''; // Clear previous calendar
+
+    currentTrainerCalendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'ru',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '23:00:00',
+        allDaySlot: false,
+        height: 'auto',
+        events: function(info, successCallback, failureCallback) {
+            fetch(`/admin/api/trainers/${trainerId}/schedule/?start=${info.startStr}&end=${info.endStr}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const events = data.events.map(event => ({
+                            id: event.id,
+                            title: event.user_name,
+                            start: event.start,
+                            end: event.end,
+                            backgroundColor: event.status === 'confirmed' ? '#10b981' : '#f59e0b',
+                            extendedProps: {
+                                status: event.status,
+                                courtName: event.court_name
+                            }
+                        }));
+                        successCallback(events);
+                    } else {
+                        failureCallback(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading trainer schedule:', error);
+                    failureCallback(error);
+                });
+        },
+        eventContent: function(arg) {
+            return {
+                html: `
+                    <div style="padding: 4px;">
+                        <div style="font-weight: 600; font-size: 12px;">${arg.event.title}</div>
+                        <div style="font-size: 10px; opacity: 0.9;">${arg.event.extendedProps.courtName}</div>
+                    </div>
+                `
+            };
+        }
+    });
+
+    currentTrainerCalendar.render();
+}
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+    if (currentTrainerCalendar) {
+        currentTrainerCalendar.destroy();
+        currentTrainerCalendar = null;
+    }
+}
+
+function showAddTrainerModal() {
+    document.getElementById('formModalTitle').textContent = 'Добавить тренера';
+    document.getElementById('trainerId').value = '';
+    document.getElementById('trainerForm').reset();
+    document.getElementById('isActive').checked = true;
+    document.getElementById('trainerFormModal').style.display = 'flex';
+}
+
+function editTrainer(trainerId) {
+    document.getElementById('formModalTitle').textContent = 'Редактировать тренера';
+    document.getElementById('trainerId').value = trainerId;
+
+    fetch(`/admin/api/trainers/${trainerId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const trainer = data.trainer;
+                document.getElementById('userId').value = trainer.user_id;
+                document.getElementById('trainerUser').value = trainer.user_id;
+                document.getElementById('firstName').value = trainer.user_first_name || '';
+                document.getElementById('lastName').value = trainer.user_last_name || '';
+                document.getElementById('email').value = trainer.user_email || '';
+                document.getElementById('phone').value = trainer.user_phone || '';
+                document.getElementById('qualifications').value = trainer.qualifications || '';
+                document.getElementById('specialization').value = trainer.specialization || '';
+                document.getElementById('experienceYears').value = trainer.experience_years;
+                document.getElementById('hourlyRate').value = trainer.hourly_rate;
+                document.getElementById('bio').value = trainer.bio || '';
+                document.getElementById('isActive').checked = trainer.is_active;
+
+                document.getElementById('trainerFormModal').style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading trainer:', error);
+            alert('Ошибка загрузки данных тренера');
+        });
+}
+
+function submitTrainerForm(event) {
+    event.preventDefault();
+
+    const trainerId = document.getElementById('trainerId').value;
+    const isEdit = trainerId !== '';
+
+    const trainerData = {
+        user_id: document.getElementById('trainerUser').value || null,
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        qualifications: document.getElementById('qualifications').value,
+        specialization: document.getElementById('specialization').value,
+        experience_years: parseInt(document.getElementById('experienceYears').value) || 0,
+        hourly_rate: parseFloat(document.getElementById('hourlyRate').value) || 0,
+        bio: document.getElementById('bio').value,
+        is_active: document.getElementById('isActive').checked,
+    };
+
+    const url = isEdit
+        ? `/admin/api/trainers/${trainerId}/update/`
+        : '/admin/api/trainers/create/';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(trainerData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeFormModal();
+            loadTrainers();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при сохранении');
+    });
+}
+
+function deleteTrainer(trainerId) {
+    if (!confirm('Вы уверены, что хотите удалить этого тренера?')) {
+        return;
+    }
+
+    fetch(`/admin/api/trainers/${trainerId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            loadTrainers();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при удалении');
+    });
+}
+
+function closeFormModal() {
+    document.getElementById('trainerFormModal').style.display = 'none';
+    document.getElementById('trainerForm').reset();
+}
+
+function closeModal() {
+    document.getElementById('trainerModal').style.display = 'none';
+}
+
+function formatNumber(num) {
+    return new Intl.NumberFormat('ru-RU').format(num);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.trainers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.trainer-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.trainer-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.trainer-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.trainer-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.trainer-info {
+    flex: 1;
+}
+
+.trainer-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.trainer-specialization {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.trainer-header .badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.trainer-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px;
+}
+
+.trainer-stat {
+    text-align: center;
+}
+
+.trainer-stat i {
+    display: block;
+    font-size: 16px;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.trainer-stat span {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.trainer-stat small {
+    font-size: 11px;
+    color: #666;
+}
+
+.trainer-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.btn-outline {
+    background: white;
+    border: 1px solid #e5e7eb;
+    color: var(--text);
+}
+
+.btn-outline:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.trainer-profile {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+
+.profile-avatar-large {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 40px;
+    font-weight: 600;
+}
+
+.profile-section {
+    margin-bottom: 32px;
+}
+
+.profile-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.stat-title {
+    font-size: 13px;
+    color: #666;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 24px;
+    border-top: 2px solid #e5e7eb;
+}
+
+.form-divider {
+    text-align: center;
+    margin: 20px 0;
+    color: #999;
+    font-size: 14px;
+    position: relative;
+}
+
+.form-divider::before,
+.form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.form-divider::before {
+    left: 0;
+}
+
+.form-divider::after {
+    right: 0;
+}
+
+#trainerCalendar {
+    padding: 20px;
+}
+</style>
+{% endblock %}

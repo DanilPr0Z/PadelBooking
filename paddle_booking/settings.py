@@ -17,7 +17,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # Django Admin убран - используем кастомную панель manager
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'booking',
     'users',
+    'manager',  # Современная кастомная админ-панель
 ]
 
 MIDDLEWARE = [
@@ -72,7 +73,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'ru-ru'
-TIME_ZONE = 'Europe/Moscow'
+TIME_ZONE = 'Europe/Samara'
 USE_I18N = True
 USE_TZ = True
 

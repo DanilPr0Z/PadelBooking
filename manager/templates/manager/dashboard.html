@@ -1,0 +1,144 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-primary" onclick="refreshMetrics()">
+    <i class="fas fa-sync-alt"></i> Обновить
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Metrics Grid -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <div class="metric-value" id="totalRevenue">...</div>
+                <div class="metric-label">Общий доход (30 дней)</div>
+            </div>
+            <div class="metric-icon success">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+        </div>
+        <div class="metric-trend up" id="revenueTrend">
+            <i class="fas fa-arrow-up"></i>
+            <span>Загрузка...</span>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <div class="metric-value" id="totalBookings">...</div>
+                <div class="metric-label">Всего бронирований</div>
+            </div>
+            <div class="metric-icon primary">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+        </div>
+        <div class="metric-trend up" id="bookingsTrend">
+            <i class="fas fa-arrow-up"></i>
+            <span>Загрузка...</span>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <div class="metric-value" id="occupancyRate">...</div>
+                <div class="metric-label">Загруженность кортов</div>
+            </div>
+            <div class="metric-icon info">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+        </div>
+        <div class="metric-trend" id="occupancyTrend">
+            <span>Загрузка...</span>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <div class="metric-value" id="activeUsers">...</div>
+                <div class="metric-label">Активных пользователей</div>
+            </div>
+            <div class="metric-icon warning">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="metric-trend up" id="usersTrend">
+            <i class="fas fa-arrow-up"></i>
+            <span>Загрузка...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Быстрые действия</h3>
+    </div>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="{% url 'manager:schedule' %}" class="btn btn-primary">
+            <i class="fas fa-calendar-plus"></i> Создать бронирование
+        </a>
+        <a href="{% url 'manager:bookings' %}" class="btn btn-secondary">
+            <i class="fas fa-list"></i> Все бронирования
+        </a>
+        <a href="{% url 'manager:analytics' %}" class="btn btn-secondary">
+            <i class="fas fa-chart-line"></i> Аналитика
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load metrics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadMetrics();
+});
+
+function loadMetrics() {
+    fetch('{% url "manager:api_metrics" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateMetrics(data.metrics);
+            }
+        })
+        .catch(error => console.error('Error loading metrics:', error));
+}
+
+function updateMetrics(metrics) {
+    // Update metric values
+    document.getElementById('totalRevenue').textContent =
+        Math.round(metrics.total_revenue).toLocaleString() + ' ₽';
+
+    document.getElementById('totalBookings').textContent = metrics.total_bookings;
+
+    document.getElementById('occupancyRate').textContent =
+        Math.round(metrics.occupancy_rate) + '%';
+
+    document.getElementById('activeUsers').textContent = metrics.active_users;
+
+    // Update trends
+    document.getElementById('revenueTrend').innerHTML =
+        '<i class="fas fa-arrow-up"></i> Оплачено: ' +
+        Math.round(metrics.paid_amount).toLocaleString() + ' ₽';
+
+    document.getElementById('bookingsTrend').innerHTML =
+        '<i class="fas fa-info-circle"></i> За последние 30 дней';
+
+    document.getElementById('usersTrend').innerHTML =
+        '<i class="fas fa-arrow-up"></i> +' + metrics.new_users + ' новых';
+}
+
+function refreshMetrics() {
+    location.reload();
+}
+</script>
+{% endblock %}

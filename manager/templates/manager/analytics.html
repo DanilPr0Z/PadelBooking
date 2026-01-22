@@ -1,0 +1,469 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Аналитика{% endblock %}
+{% block page_title %}Детальная аналитика{% endblock %}
+
+{% block header_actions %}
+<div style="display: flex; gap: 12px; align-items: center;">
+    <select id="periodFilter" class="form-select" onchange="loadAnalytics()">
+        <option value="7">За 7 дней</option>
+        <option value="30" selected>За 30 дней</option>
+        <option value="90">За 90 дней</option>
+        <option value="365">За год</option>
+    </select>
+    <button class="btn btn-secondary" onclick="exportAnalytics()">
+        <i class="fas fa-download"></i> Экспорт
+    </button>
+    <button class="btn btn-primary" onclick="loadAnalytics()">
+        <i class="fas fa-sync-alt"></i> Обновить
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="analyticsContainer">
+    <div class="loading">
+        <div class="spinner"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let analyticsData = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalytics();
+});
+
+function loadAnalytics() {
+    const days = document.getElementById('periodFilter').value;
+
+    fetch(`{% url "manager:api_analytics" %}?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                analyticsData = data;
+                displayAnalytics(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading analytics:', error);
+            document.getElementById('analyticsContainer').innerHTML =
+                '<div class="error-message">Ошибка загрузки данных</div>';
+        });
+}
+
+function displayAnalytics(data) {
+    const container = document.getElementById('analyticsContainer');
+
+    let html = `
+        <!-- Financial Metrics -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-dollar-sign"></i> Финансовая аналитика
+            </h2>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${formatNumber(data.financial.total_revenue)} ₽</div>
+                        <div class="metric-label">Общий доход</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>Оплачено: ${formatNumber(data.financial.paid_amount)} ₽</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${formatNumber(data.financial.unpaid_amount)} ₽</div>
+                        <div class="metric-label">Неоплачено</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>Платежей: ${data.financial.payments_count}</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${formatNumber(data.financial.avg_daily_revenue)} ₽</div>
+                        <div class="metric-label">Средний доход/день</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>${data.financial.period.days} дней</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${formatNumber(data.financial.forecast_next_month)} ₽</div>
+                        <div class="metric-label">Прогноз на месяц</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="fas fa-crystal-ball"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>На основе текущих данных</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Table -->
+        <div class="card" style="margin-bottom: 32px;">
+            <div class="card-header">
+                <h3 class="card-title">Доход по дням (последние 10 дней)</h3>
+            </div>
+            <div id="revenueTrendTable"></div>
+        </div>
+
+        <!-- Occupancy Metrics -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-chart-pie"></i> Загруженность
+            </h2>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${data.occupancy.overall_occupancy_rate}%</div>
+                        <div class="metric-label">Общая загруженность</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>${data.occupancy.total_booked_hours} / ${data.occupancy.total_possible_hours} часов</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${data.occupancy.total_bookings}</div>
+                        <div class="metric-label">Всего бронирований</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>За ${data.occupancy.period.days} дней</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Occupancy Table -->
+        <div class="card" style="margin-bottom: 32px;">
+            <div class="card-header">
+                <h3 class="card-title">Загруженность по часам</h3>
+            </div>
+            <div id="hourlyOccupancyTable"></div>
+        </div>
+
+        <!-- Tables -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px;">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Топ корты по доходу</h3>
+                </div>
+                <div id="courtRevenueTable"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Активность тренеров</h3>
+                </div>
+                <div id="coachOccupancyTable"></div>
+            </div>
+        </div>
+
+        <!-- Client Metrics -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-users"></i> Клиентская аналитика
+            </h2>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${data.clients.active_users}</div>
+                        <div class="metric-label">Активных клиентов</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+                <div class="metric-trend up">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>+${data.clients.new_users} новых</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${data.clients.retention_rate}%</div>
+                        <div class="metric-label">Retention Rate</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>${data.clients.users_with_multiple_bookings} повторных</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-value">${formatNumber(data.clients.avg_ltv)} ₽</div>
+                        <div class="metric-label">Средний LTV</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+                <div class="metric-trend">
+                    <span>Lifetime Value</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Clients Table -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Топ клиентов</h3>
+            </div>
+            <div id="topClientsTable"></div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+
+    // Рендерим таблицы
+    renderRevenueTrendTable(data.financial.daily_revenue);
+    renderHourlyOccupancyTable(data.occupancy.hourly_occupancy);
+    renderCourtRevenueTable(data.financial.revenue_by_court);
+    renderCoachTable(data.occupancy.coach_occupancy);
+    renderTopClientsTable(data.clients.top_clients);
+}
+
+function renderRevenueTrendTable(dailyRevenue) {
+    const container = document.getElementById('revenueTrendTable');
+    const last10Days = dailyRevenue.slice(-10);
+
+    if (last10Days.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет данных</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr><th>Дата</th><th>Доход</th><th>Бронирований</th></tr></thead>';
+    html += '<tbody>';
+
+    last10Days.forEach(day => {
+        html += `<tr>
+            <td><strong>${formatDate(day.day)}</strong></td>
+            <td>${formatNumber(day.revenue)} ₽</td>
+            <td>${day.bookings_count}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderHourlyOccupancyTable(hourlyData) {
+    const container = document.getElementById('hourlyOccupancyTable');
+
+    if (hourlyData.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет данных</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr><th>Час</th><th>Бронирований</th></tr></thead>';
+    html += '<tbody>';
+
+    hourlyData.forEach(hour => {
+        html += `<tr>
+            <td><strong>${hour.hour}:00 - ${hour.hour + 1}:00</strong></td>
+            <td>${hour.bookings_count}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderCourtRevenueTable(courts) {
+    const container = document.getElementById('courtRevenueTable');
+
+    if (courts.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет данных</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr><th>Корт</th><th>Доход</th><th>Бронирований</th></tr></thead>';
+    html += '<tbody>';
+
+    courts.slice(0, 5).forEach(court => {
+        html += `<tr>
+            <td><strong>${court.court__name}</strong></td>
+            <td>${formatNumber(court.revenue)} ₽</td>
+            <td>${court.bookings_count}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderCoachTable(coaches) {
+    const container = document.getElementById('coachOccupancyTable');
+
+    if (coaches.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет данных</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr><th>Тренер</th><th>Сессий</th><th>Часов</th></tr></thead>';
+    html += '<tbody>';
+
+    coaches.forEach(coach => {
+        html += `<tr>
+            <td>${coach.coach__first_name} ${coach.coach__last_name}</td>
+            <td>${coach.sessions_count}</td>
+            <td>${coach.total_hours}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function renderTopClientsTable(clients) {
+    const container = document.getElementById('topClientsTable');
+
+    if (clients.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет данных</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="data-table">';
+    html += '<thead><tr><th>#</th><th>Клиент</th><th>Бронирований</th><th>Потрачено</th></tr></thead>';
+    html += '<tbody>';
+
+    clients.forEach((client, index) => {
+        html += `<tr>
+            <td>${index + 1}</td>
+            <td>${client.name}</td>
+            <td>${client.bookings_count}</td>
+            <td>${formatNumber(client.total_spent)} ₽</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function formatNumber(num) {
+    return Math.round(num).toLocaleString('ru-RU');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {day: '2-digit', month: 'short'});
+}
+
+function exportAnalytics() {
+    const days = document.getElementById('periodFilter').value;
+    window.location.href = `/manager/api/analytics/export/?days=${days}`;
+}
+</script>
+
+<style>
+.section-header {
+    margin: 40px 0 24px 0;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-title i {
+    color: var(--primary);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table thead {
+    background: var(--bg);
+    border-bottom: 2px solid var(--border);
+}
+
+.data-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+</style>
+{% endblock %}

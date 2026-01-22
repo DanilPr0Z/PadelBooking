@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Manager{% endblock %} | Paddle Booking</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'manager/css/style.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+                <span>Paddle Manager</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'manager:dashboard' %}" class="nav-item {% if current_page == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{% url 'manager:schedule' %}" class="nav-item {% if current_page == 'schedule' %}active{% endif %}">
+                <i class="fas fa-calendar"></i>
+                <span>Расписание</span>
+            </a>
+
+            <a href="{% url 'manager:bookings' %}" class="nav-item {% if current_page == 'bookings' %}active{% endif %}">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Бронирования</span>
+            </a>
+
+            <a href="{% url 'manager:analytics' %}" class="nav-item {% if current_page == 'analytics' %}active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>Аналитика</span>
+            </a>
+
+            <a href="{% url 'manager:users' %}" class="nav-item {% if current_page == 'users' %}active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Пользователи</span>
+            </a>
+
+            <a href="{% url 'manager:courts' %}" class="nav-item {% if current_page == 'courts' %}active{% endif %}">
+                <i class="fas fa-table-tennis"></i>
+                <span>Корты</span>
+            </a>
+
+            <div class="nav-divider"></div>
+
+            <a href="/" class="nav-item">
+                <i class="fas fa-arrow-left"></i>
+                <span>На сайт</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    {{ request.user.first_name.0|default:request.user.username.0|upper }}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                    <div class="user-role">Администратор</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="page-header">
+            <div class="header-content">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="header-actions">
+                    {% block header_actions %}{% endblock %}
+                </div>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,1204 @@
+{% extends 'manager/base.html' %}
+{% load static %}
+
+{% block title %}Расписание{% endblock %}
+{% block page_title %}Недельное расписание кортов{% endblock %}
+
+{% block extra_css %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.css' rel='stylesheet' />
+<style>
+/* FullCalendar customization */
+.fc {
+    font-family: 'Inter', sans-serif;
+}
+
+.fc-event {
+    border-radius: 4px;
+    border: none;
+    padding: 4px 8px;
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.fc-event:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.fc-event-title {
+    font-weight: 600;
+}
+
+.fc-event-time {
+    font-size: 11px;
+}
+
+/* Custom colors by status */
+.event-confirmed {
+    background: #10b981;
+    border-left: 4px solid #065f46;
+}
+
+.event-pending {
+    background: #f59e0b;
+    border-left: 4px solid #92400e;
+}
+
+.event-cancelled {
+    background: #ef4444;
+    border-left: 4px solid #991b1b;
+    opacity: 0.6;
+}
+
+.court-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.court-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.court-btn:hover {
+    border-color: var(--primary);
+}
+
+.court-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--secondary);
+}
+
+.fc-toolbar-title {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+}
+
+.fc .fc-button-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--secondary);
+}
+
+.fc .fc-button-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.fc .fc-button-primary:disabled {
+    opacity: 0.5;
+}
+
+.legend {
+    display: flex;
+    gap: 20px;
+    padding: 16px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Court Filter -->
+<div class="card" style="margin-bottom: 16px;">
+    <div class="card-header">
+        <h3 class="card-title">Выберите корт</h3>
+    </div>
+    <div style="padding: 20px;">
+        <div class="court-selector" id="courtSelector">
+            <button class="court-btn active" data-court-id="" onclick="selectCourt('')">
+                Все корты
+            </button>
+            {% for court in courts %}
+            <button class="court-btn" data-court-id="{{ court.id }}" onclick="selectCourt('{{ court.id }}')">
+                {{ court.name }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <div class="legend-item">
+        <div class="legend-color" style="background: #10b981;"></div>
+        <span>Подтверждено</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #f59e0b;"></div>
+        <span>Ожидает подтверждения</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #ef4444;"></div>
+        <span>Отменено</span>
+    </div>
+</div>
+
+<!-- Calendar -->
+<div class="card">
+    <div id="calendarLoading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+    <div id="calendar"></div>
+</div>
+
+<!-- Booking Detail Modal -->
+<div id="bookingModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Детали бронирования</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Create Booking Modal -->
+<div id="createBookingModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Создать бронирование</h3>
+            <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="createBookingForm" onsubmit="submitCreateBooking(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newBookingDate">Дата <span style="color: red;">*</span></label>
+                        <input type="date" id="newBookingDate" class="form-control" required min="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newBookingCourt">Корт <span style="color: red;">*</span></label>
+                        <select id="newBookingCourt" class="form-control" required>
+                            <option value="">Выберите корт</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newStartTime">Время начала <span style="color: red;">*</span></label>
+                        <input type="time" id="newStartTime" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newEndTime">Время окончания <span style="color: red;">*</span></label>
+                        <input type="time" id="newEndTime" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newBookingUser">Клиент <span style="color: red;">*</span></label>
+                        <select id="newBookingUser" class="form-control" required>
+                            <option value="">Выберите клиента</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newBookingCoach">Тренер</label>
+                        <select id="newBookingCoach" class="form-control">
+                            <option value="">Без тренера</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newBookingType">Тип</label>
+                        <select id="newBookingType" class="form-control">
+                            <option value="game">Игра</option>
+                            <option value="training">Тренировка</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newBookingStatus">Статус</label>
+                        <select id="newBookingStatus" class="form-control">
+                            <option value="pending">Ожидает</option>
+                            <option value="confirmed" selected>Подтверждено</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Дополнительные параметры (сворачиваемый блок) -->
+                <div class="expandable-section">
+                    <button type="button" class="expand-btn" onclick="toggleExpandSection(this)">
+                        <i class="fas fa-chevron-down"></i> Дополнительные параметры
+                    </button>
+                    <div class="expand-content" style="display: none;">
+                        <div class="form-group">
+                            <label for="newBookingPartners">Партнеры</label>
+                            <select id="newBookingPartners" class="form-control" multiple style="height: 80px;">
+                                <!-- Заполняется JS -->
+                            </select>
+                            <small class="form-text">Ctrl/Cmd + клик для выбора нескольких</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="newLookingForPartner">
+                                <span>Ищет партнера для игры</span>
+                            </label>
+                        </div>
+
+                        <div id="partnerSearchFields" style="display: none;">
+                            <div class="form-group">
+                                <label for="newMaxPlayers">Макс. игроков</label>
+                                <input type="number" id="newMaxPlayers" class="form-control" value="4" min="2" max="8">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="newRatingLevels">Требуемый уровень игры</label>
+                                <select id="newRatingLevels" class="form-control" multiple style="height: 120px;">
+                                    <option value="D">D - Новичок</option>
+                                    <option value="D+">D+ - Начинающий</option>
+                                    <option value="C-">C- - Начинающий/Слабый средний</option>
+                                    <option value="C">C - Средний</option>
+                                    <option value="C+" selected>C+ - Средний/Крепкий любитель</option>
+                                    <option value="B-" selected>B- - Крепкий любитель</option>
+                                    <option value="B">B - Продвинутый</option>
+                                    <option value="B+">B+ - Топ-любитель</option>
+                                    <option value="A">A - Кандидат/Мастер спорта</option>
+                                    <option value="PRO">PRO - Профессионал</option>
+                                </select>
+                                <small class="form-text">Выберите уровни игроков, которые могут присоединиться (Ctrl/Cmd + клик)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Создать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
+<script>
+let calendar;
+let currentCourtId = '';
+let allUsers = [];
+let allCoaches = [];
+let allCourts = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Загружаем данные для форм
+    loadUsersForForm();
+    loadCourtsForForm();
+
+    // Устанавливаем минимальную дату на сегодня
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('newBookingDate');
+    if (dateInput) {
+        dateInput.setAttribute('min', today);
+    }
+
+    // Обработчик для чекбокса "Ищет партнера"
+    const lookingForPartnerCheckbox = document.getElementById('newLookingForPartner');
+    if (lookingForPartnerCheckbox) {
+        lookingForPartnerCheckbox.addEventListener('change', function() {
+            const partnerFields = document.getElementById('partnerSearchFields');
+            if (this.checked) {
+                partnerFields.style.display = 'block';
+            } else {
+                partnerFields.style.display = 'none';
+            }
+        });
+    }
+
+    const calendarEl = document.getElementById('calendar');
+
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'ru',
+        firstDay: 1, // Monday
+        slotMinTime: '08:00:00',
+        slotMaxTime: '22:00:00',
+        slotDuration: '01:00:00',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Сегодня',
+            week: 'Неделя',
+            day: 'День'
+        },
+        allDaySlot: false,
+        editable: true, // Enable drag and drop
+        droppable: true,
+        eventResizableFromStart: true,
+
+        // Loading indicator
+        loading: function(isLoading) {
+            const loader = document.getElementById('calendarLoading');
+            if (loader) {
+                loader.style.display = isLoading ? 'flex' : 'none';
+            }
+        },
+
+        // Load events
+        events: function(info, successCallback, failureCallback) {
+            loadEvents(info.startStr, info.endStr, successCallback, failureCallback);
+        },
+
+        // Event rendering
+        eventContent: function(arg) {
+            return {
+                html: `
+                    <div style="padding: 4px;" title="Клик для подробностей">
+                        <div style="font-weight: 600; font-size: 13px;">${arg.event.title}</div>
+                        <div style="font-size: 11px; opacity: 0.9;">${arg.event.extendedProps.courtName}</div>
+                    </div>
+                `
+            };
+        },
+
+        // Event mouse enter (tooltip)
+        eventMouseEnter: function(info) {
+            info.el.style.cursor = 'pointer';
+            info.el.style.transform = 'scale(1.02)';
+            info.el.style.zIndex = '100';
+        },
+
+        // Event mouse leave
+        eventMouseLeave: function(info) {
+            info.el.style.transform = 'scale(1)';
+            info.el.style.zIndex = '1';
+        },
+
+        // Event click
+        eventClick: function(info) {
+            showBookingDetails(info.event.id);
+        },
+
+        // Event drag & drop
+        eventDrop: function(info) {
+            updateBookingTime(info.event);
+        },
+
+        // Event resize
+        eventResize: function(info) {
+            updateBookingTime(info.event);
+        },
+
+        // Click on empty slot to create booking
+        dateClick: function(info) {
+            createBooking(info.dateStr, currentCourtId);
+        }
+    });
+
+    calendar.render();
+});
+
+function loadEvents(start, end, successCallback, failureCallback) {
+    let url = `/admin/api/schedule/events/?start=${start}&end=${end}`;
+
+    if (currentCourtId) {
+        url += `&court_id=${currentCourtId}`;
+    }
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const events = data.events.map(event => ({
+                    id: event.id,
+                    title: event.user_name,
+                    start: event.start,
+                    end: event.end,
+                    className: `event-${event.status}`,
+                    extendedProps: {
+                        courtName: event.court_name,
+                        status: event.status,
+                        bookingId: event.id
+                    }
+                }));
+                successCallback(events);
+            } else {
+                failureCallback(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading events:', error);
+            failureCallback(error);
+        });
+}
+
+function selectCourt(courtId) {
+    currentCourtId = courtId;
+
+    // Update button states
+    document.querySelectorAll('.court-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.courtId === courtId) {
+            btn.classList.add('active');
+        }
+    });
+
+    // Reload events
+    calendar.refetchEvents();
+}
+
+function showBookingDetails(bookingId) {
+    fetch(`/admin/api/bookings/${bookingId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                const modal = document.getElementById('bookingModal');
+                const body = document.getElementById('modalBody');
+
+                body.innerHTML = `
+                    <div class="booking-details">
+                        <div class="detail-row">
+                            <span class="detail-label">ID:</span>
+                            <span class="detail-value">#${booking.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Дата:</span>
+                            <span class="detail-value">${formatDate(booking.date)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Время:</span>
+                            <span class="detail-value">${booking.start_time} - ${booking.end_time}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Корт:</span>
+                            <span class="detail-value">${booking.court_name}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Клиент:</span>
+                            <span class="detail-value">${booking.user_name}</span>
+                        </div>
+                        ${booking.coach_name ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Тренер:</span>
+                            <span class="detail-value">${booking.coach_name}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span class="detail-label">Статус:</span>
+                            <span class="badge ${getStatusClass(booking.status)}">${getStatusText(booking.status)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Сумма:</span>
+                            <span class="detail-value">${Math.round(booking.total_price).toLocaleString()} ₽</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); flex-wrap: wrap;">
+                        ${booking.status === 'pending' ? `
+                        <button class="btn btn-primary" onclick="confirmBooking(${booking.id})" style="background: #10b981; flex: 1; min-width: 150px;">
+                            <i class="fas fa-check"></i> Подтвердить
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-secondary" onclick="editBooking(${booking.id})" style="flex: 1; min-width: 150px;">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </button>
+                        ${booking.status !== 'cancelled' ? `
+                        <button class="btn btn-secondary" onclick="cancelBooking(${booking.id})" style="color: #ef4444; flex: 1; min-width: 150px;">
+                            <i class="fas fa-times"></i> Отменить
+                        </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                modal.style.display = 'flex';
+            }
+        });
+}
+
+function updateBookingTime(event) {
+    const bookingId = event.id;
+    const newStart = event.start.toISOString();
+    const newEnd = event.end ? event.end.toISOString() : newStart;
+
+    fetch(`/admin/api/bookings/${bookingId}/update-time/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            start: newStart,
+            end: newEnd
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success notification
+            showNotification('Время бронирования обновлено', 'success');
+        } else {
+            // Revert the change
+            event.revert();
+            showNotification('Ошибка: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        event.revert();
+        showNotification('Ошибка обновления', 'error');
+    });
+}
+
+function createBooking(dateStr, courtId) {
+    // Открываем модальное окно создания бронирования
+    const date = new Date(dateStr);
+    const dateFormatted = date.toISOString().split('T')[0];
+    const time = dateStr.split('T')[1] ? dateStr.split('T')[1].substring(0, 5) : '10:00';
+
+    // Предзаполняем форму
+    document.getElementById('newBookingDate').value = dateFormatted;
+    document.getElementById('newStartTime').value = time;
+
+    // Вычисляем время окончания (+ 1 час)
+    const [hours, minutes] = time.split(':');
+    const endHours = (parseInt(hours) + 1).toString().padStart(2, '0');
+    document.getElementById('newEndTime').value = `${endHours}:${minutes}`;
+
+    // Устанавливаем корт, если выбран
+    if (courtId) {
+        document.getElementById('newBookingCourt').value = courtId;
+    }
+
+    // Показываем модальное окно
+    document.getElementById('createBookingModal').style.display = 'flex';
+}
+
+function loadUsersForForm() {
+    fetch('/admin/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allUsers = data.users;
+                allCoaches = data.users.filter(u => u.is_staff);
+                populateUserSelects();
+            }
+        })
+        .catch(error => console.error('Error loading users:', error));
+}
+
+function loadCourtsForForm() {
+    fetch('/admin/api/courts/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allCourts = data.courts;
+                populateCourtSelect();
+            }
+        })
+        .catch(error => console.error('Error loading courts:', error));
+}
+
+function populateUserSelects() {
+    const userSelect = document.getElementById('newBookingUser');
+    const coachSelect = document.getElementById('newBookingCoach');
+    const partnersSelect = document.getElementById('newBookingPartners');
+
+    // Очищаем и заполняем список клиентов
+    userSelect.innerHTML = '<option value="">Выберите клиента</option>';
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.full_name || user.username;
+        userSelect.appendChild(option);
+    });
+
+    // Очищаем и заполняем список тренеров
+    coachSelect.innerHTML = '<option value="">Без тренера</option>';
+    allCoaches.forEach(coach => {
+        const option = document.createElement('option');
+        option.value = coach.id;
+        option.textContent = coach.full_name || coach.username;
+        coachSelect.appendChild(option);
+    });
+
+    // Заполняем список партнеров
+    partnersSelect.innerHTML = '';
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.full_name || user.username;
+        partnersSelect.appendChild(option);
+    });
+}
+
+function populateCourtSelect() {
+    const select = document.getElementById('newBookingCourt');
+    select.innerHTML = '<option value="">Выберите корт</option>';
+
+    allCourts.forEach(court => {
+        if (court.is_available) {
+            const option = document.createElement('option');
+            option.value = court.id;
+            option.textContent = court.name;
+            select.appendChild(option);
+        }
+    });
+}
+
+function submitCreateBooking(event) {
+    event.preventDefault();
+
+    // Получаем выбранных партнеров
+    const partnersSelect = document.getElementById('newBookingPartners');
+    const selectedPartners = Array.from(partnersSelect.selectedOptions).map(option => parseInt(option.value));
+
+    // Получаем выбранные уровни игры для поиска партнера
+    const ratingLevelsSelect = document.getElementById('newRatingLevels');
+    const selectedRatingLevels = Array.from(ratingLevelsSelect.selectedOptions).map(option => option.value);
+
+    const bookingData = {
+        date: document.getElementById('newBookingDate').value,
+        start_time: document.getElementById('newStartTime').value,
+        end_time: document.getElementById('newEndTime').value,
+        court_id: document.getElementById('newBookingCourt').value,
+        user_id: document.getElementById('newBookingUser').value,
+        coach_id: document.getElementById('newBookingCoach').value || null,
+        status: document.getElementById('newBookingStatus').value,
+        booking_type: document.getElementById('newBookingType').value,
+        partners: selectedPartners,
+        looking_for_partner: document.getElementById('newLookingForPartner').checked,
+        max_players: parseInt(document.getElementById('newMaxPlayers').value) || 4,
+        required_rating_levels: selectedRatingLevels,
+    };
+
+    fetch('/admin/api/bookings/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(bookingData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Бронирование успешно создано!', 'success');
+            closeCreateModal();
+            calendar.refetchEvents(); // Обновляем календарь
+        } else {
+            showNotification('Ошибка: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Произошла ошибка при создании', 'error');
+    });
+}
+
+function closeCreateModal() {
+    document.getElementById('createBookingModal').style.display = 'none';
+    document.getElementById('createBookingForm').reset();
+}
+
+function toggleExpandSection(button) {
+    const content = button.nextElementSibling;
+    const icon = button.querySelector('i');
+
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
+
+function confirmBooking(id) {
+    if (!confirm('Подтвердить это бронирование?')) return;
+
+    fetch(`/admin/api/bookings/${id}/confirm/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Бронирование подтверждено', 'success');
+            calendar.refetchEvents();
+            closeModal();
+        } else {
+            showNotification('Ошибка: ' + data.error, 'error');
+        }
+    });
+}
+
+function cancelBooking(id) {
+    if (!confirm('Отменить это бронирование?')) return;
+
+    fetch(`/admin/api/bookings/${id}/cancel/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Бронирование отменено', 'success');
+            calendar.refetchEvents();
+            closeModal();
+        } else {
+            showNotification('Ошибка: ' + data.error, 'error');
+        }
+    });
+}
+
+function editBooking(id) {
+    // Перенаправляем на страницу бронирований
+    // В будущем можно добавить модальное окно редактирования прямо здесь
+    window.location.href = `/admin/bookings/`;
+}
+
+function closeModal() {
+    document.getElementById('bookingModal').style.display = 'none';
+}
+
+function showNotification(message, type = 'info') {
+    // Создаем toast уведомление
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icon = type === 'success' ? 'fa-check-circle' :
+                 type === 'error' ? 'fa-exclamation-circle' :
+                 'fa-info-circle';
+
+    toast.innerHTML = `
+        <i class="fas ${icon} toast-icon"></i>
+        <div class="toast-message">${message}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Автоматически убираем через 5 секунд
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'pending': 'badge-warning',
+        'confirmed': 'badge-success',
+        'cancelled': 'badge-danger',
+        'completed': 'badge-info'
+    };
+    return classes[status] || 'badge-secondary';
+}
+
+function getStatusText(status) {
+    const texts = {
+        'pending': 'Ожидает',
+        'confirmed': 'Подтверждено',
+        'cancelled': 'Отменено',
+        'completed': 'Завершено'
+    };
+    return texts[status] || status;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {day: '2-digit', month: 'long', year: 'numeric'});
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Close modal on outside click
+window.onclick = function(event) {
+    const bookingModal = document.getElementById('bookingModal');
+    const createModal = document.getElementById('createBookingModal');
+
+    if (event.target === bookingModal) {
+        closeModal();
+    }
+    if (event.target === createModal) {
+        closeCreateModal();
+    }
+}
+</script>
+
+<style>
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    overflow-y: auto;
+    padding: 20px 0;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 650px;
+    max-height: calc(100vh - 40px);
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--text-light);
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
+.booking-details {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.detail-value {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-secondary {
+    background: var(--bg);
+    color: var(--text-light);
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(158, 240, 26, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast.success {
+    border-left: 4px solid #10b981;
+}
+
+.toast.error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast.info {
+    border-left: 4px solid #3b82f6;
+}
+
+.toast-icon {
+    font-size: 20px;
+}
+
+.toast.success .toast-icon {
+    color: #10b981;
+}
+
+.toast.error .toast-icon {
+    color: #ef4444;
+}
+
+.toast.info .toast-icon {
+    color: #3b82f6;
+}
+
+.toast-message {
+    flex: 1;
+    font-weight: 500;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 0;
+    line-height: 1;
+}
+
+/* Calendar loading */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Calendar improvements */
+#calendar {
+    position: relative;
+}
+
+.fc-timegrid-slot {
+    height: 3em !important;
+}
+
+.fc-timegrid-event {
+    border-radius: 4px !important;
+}
+
+/* Expandable section */
+.expandable-section {
+    margin: 16px 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.expand-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.expand-btn:hover {
+    background: #e5e7eb;
+}
+
+.expand-btn i {
+    transition: transform 0.2s;
+}
+
+.expand-content {
+    padding-top: 16px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Compact form styles */
+.form-row {
+    margin-bottom: 16px;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-text {
+    font-size: 11px;
+    margin-top: 4px;
+}
+</style>
+{% endblock %}
